@@ -2,6 +2,7 @@
 import { Bell, Search } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Bosh sahifa',
@@ -35,6 +36,8 @@ export default function Topbar() {
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
         <input className="input w-56 pl-9 py-1.5 text-sm" placeholder="Qidirish…" />
       </div>
+
+      <ThemeToggle />
 
       <button className="btn btn-ghost relative w-9 h-9 p-0 rounded-lg">
         <Bell size={16} />
