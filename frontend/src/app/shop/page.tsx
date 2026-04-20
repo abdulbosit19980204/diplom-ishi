@@ -15,6 +15,7 @@ interface Product {
   description: string;
   price: string;
   stock: number;
+  created_by_name?: string;
 }
 
 export default function ShopPage() {
@@ -147,12 +148,21 @@ export default function ShopPage() {
                 </div>
                 
                 <div className="p-5 flex-1 flex flex-col">
-                  <div className="mb-2">
+                  <div className="mb-1 flex items-center justify-between gap-2">
                     <h3 className="font-bold text-[15px] group-hover:text-indigo-400 transition-colors line-clamp-1" style={{ color: 'var(--text-primary)' }}>
                       {product.name}
                     </h3>
                   </div>
                   
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <div className="w-4 h-4 rounded-full brand-gradient flex items-center justify-center text-[7px] text-white font-bold">
+                       {(product.created_by_name || 'A')[0].toUpperCase()}
+                    </div>
+                    <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
+                       {product.created_by_name || 'Admin'}
+                    </span>
+                  </div>
+
                   <p className="text-[12px] line-clamp-2 mb-4 flex-1" style={{ color: 'var(--text-muted)' }}>
                     {product.description || "Ushbu mahsulot haqida ma'lumot yo'q."}
                   </p>

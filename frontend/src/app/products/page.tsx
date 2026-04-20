@@ -10,6 +10,7 @@ interface Product {
   description: string;
   price: string;
   stock: number;
+  created_by_name?: string;
 }
 
 const EMPTY: Omit<Product, 'id'> = { name: '', description: '', price: '', stock: 0 };
@@ -90,6 +91,7 @@ export default function ProductsPage() {
             <thead>
               <tr>
                 <th>Mahsulot nomi</th>
+                <th>Sotuvchi</th>
                 <th>Narxi</th>
                 <th>Omborda</th>
                 <th>Holati</th>
@@ -99,7 +101,7 @@ export default function ProductsPage() {
             <tbody>
               {loading
                 ? Array(5).fill(0).map((_, i) => (
-                  <tr key={i}>{Array(5).fill(0).map((_, j) => <td key={j}><div className="skeleton h-4 rounded" /></td>)}</tr>
+                  <tr key={i}>{Array(6).fill(0).map((_, j) => <td key={j}><div className="skeleton h-4 rounded" /></td>)}</tr>
                 ))
                 : filtered.map((p, i) => (
                   <motion.tr key={p.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
@@ -113,6 +115,16 @@ export default function ProductsPage() {
                           <p className="strong text-[13px]">{p.name}</p>
                           <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{p.description?.slice(0, 40) || '—'}</p>
                         </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full brand-gradient flex items-center justify-center text-[8px] text-white font-bold">
+                          {(p.created_by_name || 'A')[0].toUpperCase()}
+                        </div>
+                        <span className="text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+                           {p.created_by_name || 'Admin'}
+                        </span>
                       </div>
                     </td>
                     <td className="strong">${p.price}</td>

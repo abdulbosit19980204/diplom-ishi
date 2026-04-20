@@ -22,6 +22,9 @@ class ProductViewSet(viewsets.ModelViewSet):
             permission_classes = [IsManagerOrAdmin]
         return [permission() for permission in permission_classes]
 
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
 

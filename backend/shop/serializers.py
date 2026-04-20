@@ -3,9 +3,12 @@ from rest_framework import serializers
 from .models import Product, Order, OrderItem, InventoryTransaction
 
 class ProductSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.ReadOnlyField(source='created_by.username')
+
     class Meta:
         model = Product
-        fields = '__all__'
+        fields = ('id', 'name', 'description', 'price', 'stock', 'created_at', 'updated_at', 'created_by', 'created_by_name')
+        read_only_fields = ('created_at', 'updated_at', 'created_by')
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source='product.name')
