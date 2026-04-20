@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, ShoppingCart, MessageSquare, BarChart3, Settings, ChevronRight, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, MessageSquare, BarChart3, Settings, ChevronRight, LogOut, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
 
@@ -14,7 +14,8 @@ const nav = [
     { name: 'Mahsulotlar',  href: '/products',  icon: Package },
     { name: 'Buyurtmalar',  href: '/orders',    icon: ShoppingCart },
   ]},
-  { label: 'Aloqa', items: [
+  { label: 'Boshqaruv', items: [
+    { name: 'Foydalanuvchilar', href: '/users', icon: Users },
     { name: 'Xabarlar',     href: '/chat',      icon: MessageSquare },
   ]},
 ];

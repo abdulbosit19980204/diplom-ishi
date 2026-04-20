@@ -1,75 +1,138 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
 from .models import Message
 from django.contrib.auth import get_user_model
-from asgiref.sync import sync_to_async
+from django.contrib.auth.models import AnonymousUser
 
 User = get_user_model()
 
 class ChatConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        # We will use the user's ID as the room group name
-        # For JWT, a custom middleware is typically needed, 
-        # but defaulting to standard Django Auth for simplicity here
-        if not self.scope['user'].is_authenticated:
-            await self.accept() # Accept to send Auth Error if needed, but simple fallback:
-            # await self.close()
-        
-        # fallback using anonymous room for tests
-        user_id = self.scope['user'].id if self.scope['user'].is_authenticated else "anon"
-        self.room_name = f"user_{user_id}"
-        self.room_group_name = f"chat_{self.room_name}"
+    """
+    Room strategy:
+      - Global admin room: chat_admin
+      - Per-user room:     chat_user_{id}
+      - Per-order room:    chat_order_{order_id}
 
-        await self.channel_layer.group_add(
-            self.room_group_name,
-            self.channel_name
-        )
+    The frontend connects to /ws/chat/?token=<JWT>[&order_id=<id>]
+    Messages are broadcast to the relevant rooms.
+    """
+
+    async def connect(self):
+        user = self.scope.get("user")
+        if not user or isinstance(user, AnonymousUser) or not user.is_authenticated:
+            await self.close(code=4001)
+            return
+
+        self.user = user
+        query_string = self.scope.get("query_string", b"").decode()
+        from urllib.parse import parse_qs
+        qs = parse_qs(query_string)
+        self.order_id = qs.get("order_id", [None])[0]
+
+        # Join user's personal room
+        self.personal_room = f"chat_user_{user.id}"
+        await self.channel_layer.group_add(self.personal_room, self.channel_name)
+
+        # If admin/manager also join admin room
+        if hasattr(user, "role") and user.role in ("ADMIN", "MANAGER"):
+            self.admin_room = "chat_admin"
+            await self.channel_layer.group_add(self.admin_room, self.channel_name)
+        else:
+            self.admin_room = None
+
+        # If order_id present join order room
+        if self.order_id:
+            self.order_room = f"chat_order_{self.order_id}"
+            await self.channel_layer.group_add(self.order_room, self.channel_name)
+        else:
+            self.order_room = None
+
         await self.accept()
 
-    async def disconnect(self, close_code):
-        if hasattr(self, 'room_group_name'):
-            await self.channel_layer.group_discard(
-                self.room_group_name,
-                self.channel_name
-            )
-
-    async def receive(self, text_data):
-        text_data_json = json.loads(text_data)
-        message = text_data_json['message']
-        receiver_id = text_data_json.get('receiver_id')
-
-        if self.scope['user'].is_authenticated and receiver_id:
-            # Save to database
-            saved_msg = await self.save_message(self.scope['user'].id, receiver_id, message)
-            
-            # Send to receiver's group
-            receiver_group = f"chat_user_{receiver_id}"
-            await self.channel_layer.group_send(
-                receiver_group,
-                {
-                    'type': 'chat_message',
-                    'message': saved_msg.content,
-                    'sender': self.scope['user'].username
-                }
-            )
-        else:
-            # Echo back if not auth'd or no receiver
-            await self.send(text_data=json.dumps({
-                'message': message,
-                'sender': 'System (Unauthenticated)'
-            }))
-
-    async def chat_message(self, event):
-        message = event['message']
-        sender = event['sender']
-
+        # Send confirmation
         await self.send(text_data=json.dumps({
-            'message': message,
-            'sender': sender
+            "type": "connection_established",
+            "user": user.username,
+            "order_id": self.order_id,
         }))
 
-    @sync_to_async
-    def save_message(self, sender_id, receiver_id, content):
-        sender = User.objects.get(id=sender_id)
-        receiver = User.objects.get(id=receiver_id)
-        return Message.objects.create(sender=sender, receiver=receiver, content=content)
+    async def disconnect(self, close_code):
+        for room in [
+            getattr(self, "personal_room", None),
+            getattr(self, "admin_room", None),
+            getattr(self, "order_room", None),
+        ]:
+            if room:
+                await self.channel_layer.group_discard(room, self.channel_name)
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        message_text = data.get("message", "").strip()
+        receiver_id  = data.get("receiver_id")
+        order_id     = data.get("order_id") or getattr(self, "order_id", None)
+
+        if not message_text:
+            return
+
+        # Save to database
+        saved = await self.save_message(
+            sender_id=self.user.id,
+            receiver_id=receiver_id,
+            content=message_text,
+            order_id=order_id,
+        )
+
+        payload = {
+            "type": "chat_message",
+            "id": saved.id,
+            "message": saved.content,
+            "sender": self.user.username,
+            "sender_id": self.user.id,
+            "timestamp": saved.timestamp.isoformat(),
+            "order_id": order_id,
+        }
+
+        # Send to order room if order context
+        if order_id:
+            await self.channel_layer.group_send(f"chat_order_{order_id}", payload)
+
+        # Send to receiver's personal room
+        if receiver_id:
+            await self.channel_layer.group_send(f"chat_user_{receiver_id}", payload)
+
+        # Also echo back to sender
+        await self.send(text_data=json.dumps(payload))
+
+    async def chat_message(self, event):
+        # Avoid double-receive for sender (sender already got echo)
+        if event.get("sender_id") == self.user.id:
+            return
+        await self.send(text_data=json.dumps({
+            "type": "chat_message",
+            "id": event.get("id"),
+            "message": event["message"],
+            "sender": event["sender"],
+            "sender_id": event.get("sender_id"),
+            "timestamp": event.get("timestamp"),
+            "order_id": event.get("order_id"),
+        }))
+
+    @database_sync_to_async
+    def save_message(self, sender_id, receiver_id, content, order_id=None):
+        sender = User.objects.get(pk=sender_id)
+        receiver = None
+        if receiver_id:
+            try:
+                receiver = User.objects.get(pk=receiver_id)
+            except User.DoesNotExist:
+                pass
+
+        # Lazy import to avoid circular
+        from .models import Message
+        return Message.objects.create(
+            sender=sender,
+            receiver=receiver,
+            content=content,
+            order_id=order_id if order_id else None,
+        )
