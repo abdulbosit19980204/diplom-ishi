@@ -6,6 +6,8 @@ import {
   Users, ShieldCheck, UserX, ChevronDown, Search,
   MoreHorizontal, UserCheck, Edit2, Trash2, X, AlertTriangle
 } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
+import { useRouter } from 'next/navigation';
 
 interface UserItem {
   id: number;
@@ -21,18 +23,18 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function UsersPage() {
+  const { role, isSuperuser } = useAuthStore();
+  const router = useRouter();
   const [users, setUsers]             = useState<UserItem[]>([]);
   const [loading, setLoading]         = useState(true);
-  const [search, setSearch]           = useState('');
-  const [filterRole, setFilterRole]   = useState('ALL');
-  const [editUser, setEditUser]       = useState<UserItem | null>(null);
-  const [editRole, setEditRole]       = useState('CUSTOMER');
-  const [saving, setSaving]           = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<UserItem | null>(null);
 
   useEffect(() => {
+    if (!isSuperuser && role !== 'ADMIN') {
+      router.push('/dashboard');
+      return;
+    }
     api.get('users/').then(r => setUsers(r.data)).catch(console.error).finally(() => setLoading(false));
-  }, []);
+  }, [role, isSuperuser, router]);
 
   const filtered = users.filter(u => {
     const matchSearch = u.username.toLowerCase().includes(search.toLowerCase()) ||

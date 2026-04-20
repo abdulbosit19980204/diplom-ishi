@@ -20,8 +20,8 @@ export default function LoginPage() {
     setError(''); setLoading(true);
     try {
       const res = await api.post('auth/login/', { username, password });
-      const { access, role, user_username } = res.data;
-      setAuth(access, role || 'CUSTOMER', user_username || username);
+      const { access, role, user_username, user_id, is_superuser } = res.data;
+      setAuth(access, role || 'CUSTOMER', user_username || username, user_id, !!is_superuser);
       router.push('/dashboard');
     } catch {
       setError("Foydalanuvchi nomi yoki parol noto'g'ri");

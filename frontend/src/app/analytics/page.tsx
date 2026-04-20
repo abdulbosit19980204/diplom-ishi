@@ -3,14 +3,22 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { motion } from 'framer-motion';
 import { TrendingUp, ShoppingCart, Users, Package, AlertTriangle } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
+import { useRouter } from 'next/navigation';
 
 export default function AnalyticsPage() {
+  const { role, isSuperuser } = useAuthStore();
+  const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isSuperuser && role !== 'ADMIN' && role !== 'MANAGER') {
+      router.push('/dashboard');
+      return;
+    }
     api.get('analytics/').then(r => setData(r.data)).catch(console.error).finally(() => setLoading(false));
-  }, []);
+  }, [role, isSuperuser, router]);
 
   const statuses = [
     { key: 'PENDING',   label: 'Kutilmoqda',       color: 'var(--warning)' },

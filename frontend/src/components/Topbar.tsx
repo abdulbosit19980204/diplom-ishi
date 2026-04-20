@@ -15,7 +15,7 @@ const pageTitles: Record<string, string> = {
 
 export default function Topbar() {
   const pathname = usePathname();
-  const { username, role } = useAuthStore();
+  const { username, role, isSuperuser } = useAuthStore();
 
   if (['/', '/login', '/register'].includes(pathname)) return null;
 
@@ -24,6 +24,8 @@ export default function Topbar() {
     MANAGER: 'Menejer',
     CUSTOMER: 'Mijoz',
   };
+
+  const currentRoleLabel = isSuperuser ? 'Superuser' : (roleNames[role ?? ''] ?? 'Foydalanuvchi');
 
   const title = pageTitles[pathname] ?? 'Dashboard';
 
@@ -52,7 +54,7 @@ export default function Topbar() {
             {username || 'Mehmon'}
           </p>
           <p className="text-[11px] capitalize" style={{ color: 'var(--brand)' }}>
-            {roleNames[role ?? ''] ?? 'Foydalanuvchi'}
+            {currentRoleLabel}
           </p>
         </div>
         <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white font-bold text-sm ring-2 ring-transparent group-hover:ring-indigo-500/30 transition-all">
