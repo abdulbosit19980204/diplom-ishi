@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
-import { motion } from 'yramer-motion';
+import { motion } from 'framer-motion';
 import { 
   History, ArrowUpCircle, ArrowDownCircle, RefreshCw, 
   Filter, Calendar, Search, Package, User, Hash

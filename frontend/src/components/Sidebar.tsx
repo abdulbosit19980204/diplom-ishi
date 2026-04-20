@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, ShoppingCart, MessageSquare,
-  BarChart3, Settings, ChevronRight, LogOut, Users
+  BarChart3, Settings, ChevronLeft, ChevronRight, LogOut, Users,
+  History as HistoryIcon
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
@@ -40,7 +41,7 @@ const NAV_CONFIG: NavSection[] = [
     items: [
       { name: 'Mahsulotlar', href: '/products',  icon: Package },
       { name: 'Buyurtmalar', href: '/orders',    icon: ShoppingCart },
-      { name: 'Ombor',       href: '/inventory', icon: History, roles: ['ADMIN', 'MANAGER'] },
+      { name: 'Ombor',       href: '/inventory', icon: HistoryIcon, roles: ['ADMIN', 'MANAGER'] },
     ],
   },
   {
