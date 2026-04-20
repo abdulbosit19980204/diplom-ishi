@@ -31,6 +31,7 @@ const NAV_CONFIG: NavSection[] = [
     label: 'Asosiy',
     items: [
       { name: 'Bosh sahifa', href: '/dashboard', icon: LayoutDashboard },
+      { name: "Do'kon",      href: '/shop',      icon: Package },
       { name: 'Analitika',   href: '/analytics', icon: BarChart3, roles: ['ADMIN', 'MANAGER'] },
     ],
   },
