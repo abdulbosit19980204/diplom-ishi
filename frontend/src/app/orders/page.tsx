@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, CheckCircle2, Clock, Truck, Package, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { Search, X, CheckCircle2, Clock, Truck, Package, ChevronRight, MessageSquare } from 'lucide-react';
 
 const statusFlow = [
   { key: 'PENDING',   label: 'Kutilmoqda',       icon: Clock,         color: 'var(--warning)' },
@@ -138,6 +139,36 @@ export default function OrdersPage() {
               <button className="btn btn-ghost w-8 h-8 p-0 rounded-lg" onClick={() => setSelected(null)}><X size={14} /></button>
             </div>
 
+            {/* Primary Actions */}
+            <div className="p-4 border-b" style={{ borderColor: 'var(--border)' }}>
+              <div className="space-y-2">
+                {selected.status === 'PENDING' && (
+                  <button className="btn btn-primary w-full py-3 text-[14px] flex items-center justify-center gap-2"
+                    onClick={() => updateStatus(selected.id, 'ACCEPTED')} disabled={updating}>
+                    <CheckCircle2 size={16} /> Qabul qilish
+                  </button>
+                )}
+                {selected.status === 'ACCEPTED' && (
+                  <button className="btn btn-primary w-full py-3 text-[14px] flex items-center justify-center gap-2"
+                    onClick={() => updateStatus(selected.id, 'SHIPPED')} disabled={updating}>
+                    <Truck size={16} /> Yo'lga chiqarish
+                  </button>
+                )}
+                {selected.status === 'SHIPPED' && (
+                  <button className="btn btn-primary w-full py-3 text-[14px] flex items-center justify-center gap-2"
+                    onClick={() => updateStatus(selected.id, 'DELIVERED')} disabled={updating}>
+                    <Package size={16} /> Yetkazilganini tasdiqlash
+                  </button>
+                )}
+                
+                <Link href={`/chat?orderId=${selected.id}&userId=${selected.user}&name=${selected.user_name}`} className="block">
+                  <button className="btn btn-secondary w-full py-3 text-[14px] flex items-center justify-center gap-2 mt-2">
+                    <MessageSquare size={16} /> Mijoz bilan bog'lanish
+                  </button>
+                </Link>
+              </div>
+            </div>
+
             {/* Timeline */}
             <div className="p-4 border-b" style={{ borderColor: 'var(--border)' }}>
               <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Jarayon</p>
@@ -166,16 +197,20 @@ export default function OrdersPage() {
               })}
             </div>
 
-            {/* Quick update */}
+            {/* Quick update (smaller) */}
             <div className="p-4 border-b" style={{ borderColor: 'var(--border)' }}>
               <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
-                Holatni o'zgartirish
+                Holatni boshqarish
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {statusFlow.map(s => (
                   <button key={s.key}
                     disabled={updating || selected.status === s.key}
-                    className={`btn text-[12px] py-2 ${selected.status === s.key ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`px-2 py-1 rounded-md text-[10px] font-medium border transition-all ${
+                      selected.status === s.key 
+                        ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' 
+                        : 'border-transparent hover:bg-white/5 text-gray-500'
+                    }`}
                     onClick={() => updateStatus(selected.id, s.key)}
                   >
                     {s.label}
@@ -195,12 +230,6 @@ export default function OrdersPage() {
                   <span style={{ color: 'var(--text-muted)' }}>Sana</span>
                   <span style={{ color: 'var(--text-secondary)' }}>
                     {new Date(selected.created_at).toLocaleDateString('uz-UZ')}
-                  </span>
-                </div>
-                <div className="flex justify-between text-[13px]">
-                  <span style={{ color: 'var(--text-muted)' }}>Holati</span>
-                  <span className={`badge badge-${selected.status.toLowerCase()} text-[10px]`}>
-                    {statusFlow.find(x => x.key === selected.status)?.label}
                   </span>
                 </div>
               </div>

@@ -23,6 +23,15 @@ export default function DashboardPage() {
     ]).finally(() => setLoading(false));
   }, []);
 
+  const updateStatus = async (id: number, status: string) => {
+    try {
+      await api.patch(`orders/${id}/`, { status });
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+      // Refresh stats too
+      api.get('analytics/').then(r => setStats(r.data)).catch(() => {});
+    } catch {}
+  };
+
   const kpis = [
     {
       label: 'Umumiy daromad',
@@ -325,7 +334,20 @@ export default function DashboardPage() {
                     <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                       {new Date(o.created_at).toLocaleDateString('uz-UZ')}
                     </td>
-                    <td className="text-right strong">${o.total_price}</td>
+                    <td className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {o.status === 'PENDING' && (
+                          <button className="btn btn-ghost w-7 h-7 p-0 rounded-md text-green-400"
+                            onClick={() => updateStatus(o.id, 'ACCEPTED')} title="Qabul qilish">
+                            <CheckCircle2 size={13} />
+                          </button>
+                        )}
+                        <Link href={`/chat?orderId=${o.id}&userId=${o.user}&name=${o.user_name}`}
+                          className="btn btn-ghost w-7 h-7 p-0 rounded-md text-indigo-400 flex items-center justify-center">
+                          <ArrowUpRight size={13} />
+                        </Link>
+                      </div>
+                    </td>
                   </tr>
                 ))
               }

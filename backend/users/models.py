@@ -8,6 +8,8 @@ class User(AbstractUser):
         ('CUSTOMER', 'Customer'),
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='CUSTOMER')
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
+    bio = models.TextField(max_length=500, blank=True, null=True)
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"

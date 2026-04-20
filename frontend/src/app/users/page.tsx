@@ -27,6 +27,12 @@ export default function UsersPage() {
   const router = useRouter();
   const [users, setUsers]             = useState<UserItem[]>([]);
   const [loading, setLoading]         = useState(true);
+  const [search, setSearch]           = useState('');
+  const [filterRole, setFilterRole]   = useState('ALL');
+  const [editUser, setEditUser]       = useState<UserItem | null>(null);
+  const [editRole, setEditRole]       = useState('');
+  const [saving, setSaving]           = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<UserItem | null>(null);
 
   useEffect(() => {
     if (!isSuperuser && role !== 'ADMIN') {

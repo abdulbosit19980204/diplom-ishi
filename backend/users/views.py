@@ -12,6 +12,29 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = RegisterSerializer
 
+from .serializers import RegisterSerializer, UserSerializer, ProfileSerializer, ChangePasswordSerializer
+
+class ProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = ProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+class ChangePasswordView(generics.UpdateAPIView):
+    serializer_class = ChangePasswordSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+        if not user.check_password(serializer.validated_data['old_password']):
+            return Response({"error": "Eski parol noto'g'ri"}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        return Response({"message": "Parol muvaffaqiyatli o'zgartirildi"}, status=status.HTTP_200_OK)
+
 class UserViewSet(viewsets.ModelViewSet):
     """Admin-only: full user management."""
     queryset = User.objects.all().order_by('id')
