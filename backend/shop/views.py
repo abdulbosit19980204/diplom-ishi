@@ -4,12 +4,12 @@ from rest_framework.response import Response
 from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth
 from datetime import datetime, timedelta
-from .models import Product, Order
-from .serializers import ProductSerializer, OrderSerializer
-from users.permissions import IsManagerOrAdmin
 from django.contrib.auth import get_user_model
+from users.permissions import IsManagerOrAdmin
 
 User = get_user_model()
+from .models import Product, Order, InventoryTransaction
+from .serializers import ProductSerializer, OrderSerializer, InventoryTransactionSerializer
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
@@ -28,8 +28,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role in ['ADMIN', 'MANAGER']:
-            return Order.objects.all()
-        return Order.objects.filter(user=user)
+            return Order.objects.all().order_by('-created_at')
+        return Order.objects.filter(user=user).order_by('-created_at')
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'create']:
@@ -41,6 +41,14 @@ class OrderViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+class InventoryTransactionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = InventoryTransaction.objects.all().order_by('-created_at')
+    permission_classes = [IsManagerOrAdmin]
+    
+    def get_serializer_class(self):
+        from .serializers import InventoryTransactionSerializer
+        return InventoryTransactionSerializer
+
 class AnalyticsView(APIView):
     permission_classes = [IsManagerOrAdmin]
 
@@ -51,7 +59,9 @@ class AnalyticsView(APIView):
         total_orders = Order.objects.count()
         total_products = Product.objects.count()
         total_customers = User.objects.filter(role='CUSTOMER').count()
-        low_stock = Product.objects.filter(stock__lt=10).count()
+        
+        low_stock_products = Product.objects.filter(stock__lt=10).values('id', 'name', 'stock')
+        low_stock_count = low_stock_products.count()
 
         # Orders by status
         status_counts = {}
@@ -92,8 +102,9 @@ class AnalyticsView(APIView):
                 'total_orders': total_orders,
                 'total_products': total_products,
                 'total_customers': total_customers,
-                'low_stock': low_stock,
+                'low_stock': low_stock_count,
             },
+            'low_stock_alerts': list(low_stock_products),
             'status_counts': status_counts,
             'monthly_data': monthly_data,
             'top_products': list(top_products),

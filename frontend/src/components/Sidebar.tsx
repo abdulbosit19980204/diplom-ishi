@@ -38,8 +38,9 @@ const NAV_CONFIG: NavSection[] = [
   {
     label: "Do'kon",
     items: [
-      { name: 'Mahsulotlar', href: '/products', icon: Package },
-      { name: 'Buyurtmalar', href: '/orders',   icon: ShoppingCart },
+      { name: 'Mahsulotlar', href: '/products',  icon: Package },
+      { name: 'Buyurtmalar', href: '/orders',    icon: ShoppingCart },
+      { name: 'Ombor',       href: '/inventory', icon: History, roles: ['ADMIN', 'MANAGER'] },
     ],
   },
   {

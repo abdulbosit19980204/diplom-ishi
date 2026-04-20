@@ -360,24 +360,35 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── Low stock alert ─── */}
-      {stats?.stats?.low_stock > 0 && (
+      {stats?.low_stock_alerts?.length > 0 && (
         <motion.div
-          className="flex items-center gap-3 p-4 rounded-2xl border"
+          className="flex flex-col gap-4 p-5 rounded-2xl border"
           style={{ background: 'rgba(245,158,11,0.07)', borderColor: 'rgba(245,158,11,0.25)' }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: 'rgba(245,158,11,0.15)' }}>
-            <AlertTriangle size={16} style={{ color: 'var(--warning)' }} />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(245,158,11,0.15)' }}>
+              <AlertTriangle size={16} style={{ color: 'var(--warning)' }} />
+            </div>
+            <div>
+              <p className="text-[13px] font-semibold" style={{ color: 'var(--warning)' }}>Omborni to'ldirish kerak!</p>
+              <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
+                Quyidagi mahsulotlar 10 tadan kam qolgan:
+              </p>
+            </div>
+            <Link href="/products" className="btn btn-secondary ml-auto text-[12px] py-1.5 px-3" style={{ color: 'var(--warning)', borderColor: 'rgba(245,158,11,0.3)' }}>
+              Hammasini ko'rish
+            </Link>
           </div>
-          <div>
-            <p className="text-[13px] font-semibold" style={{ color: 'var(--warning)' }}>Omborni to'ldirish kerak!</p>
-            <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-              {stats.stats.low_stock} ta mahsulot 10 tadan kam qolgan.
-            </p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {stats.low_stock_alerts.slice(0, 6).map((item: any) => (
+              <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+                <span className="text-[13px] font-medium truncate pr-2" style={{ color: 'var(--text-primary)' }}>{item.name}</span>
+                <span className="badge badge-cancelled text-[10px] whitespace-nowrap">{item.stock} ta qoldi</span>
+              </div>
+            ))}
           </div>
-          <Link href="/products" className="btn btn-secondary ml-auto text-[12px] py-1.5 px-3" style={{ color: 'var(--warning)', borderColor: 'rgba(245,158,11,0.3)' }}>
-            Ko'rish
-          </Link>
         </motion.div>
       )}
     </div>

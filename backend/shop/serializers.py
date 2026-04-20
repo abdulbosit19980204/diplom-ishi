@@ -1,5 +1,6 @@
+from django.db import transaction
 from rest_framework import serializers
-from .models import Product, Order, OrderItem
+from .models import Product, Order, OrderItem, InventoryTransaction
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,6 +15,15 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ('id', 'product', 'product_name', 'quantity', 'price')
         read_only_fields = ('price',)
 
+class InventoryTransactionSerializer(serializers.ModelSerializer):
+    product_name = serializers.ReadOnlyField(source='product.name')
+    created_by_name = serializers.ReadOnlyField(source='created_by.username')
+
+    class Meta:
+        model = InventoryTransaction
+        fields = ('id', 'product', 'product_name', 'delta', 'transaction_type', 'order', 'created_at', 'created_by_name')
+        read_only_fields = ('created_at', 'created_by_name')
+
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
     user_name = serializers.ReadOnlyField(source='user.username')
@@ -25,27 +35,47 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
-        order = Order.objects.create(**validated_data)
-        total = 0
         
-        for item_data in items_data:
-            product = item_data['product']
-            quantity = item_data['quantity']
-            price = product.price
+        with transaction.atomic():
+            order = Order.objects.create(**validated_data)
+            total = 0
+            user = self.context['request'].user
             
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                quantity=quantity,
-                price=price
-            )
-            total += price * quantity
-            
-            # Simple stock reduction
-            if product.stock >= quantity:
+            for item_data in items_data:
+                product_id = item_data['product'].id
+                quantity = item_data['quantity']
+                
+                # Lock the product record for update to prevent race conditions
+                product = Product.objects.select_for_update().get(id=product_id)
+                
+                if product.stock < quantity:
+                    raise serializers.ValidationError({
+                        "items": f"'{product.name}' mahsulotidan yetarli miqdor yo'q (Mavjud: {product.stock})"
+                    })
+                
+                price = product.price
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    quantity=quantity,
+                    price=price
+                )
+                
+                # Record transaction
+                InventoryTransaction.objects.create(
+                    product=product,
+                    delta=-quantity,
+                    transaction_type='SALE',
+                    order=order,
+                    created_by=user
+                )
+
+                # Update stock
                 product.stock -= quantity
                 product.save()
-            
-        order.total_price = total
-        order.save()
-        return order
+                
+                total += price * quantity
+                
+            order.total_price = total
+            order.save()
+            return order

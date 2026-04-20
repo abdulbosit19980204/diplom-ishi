@@ -4,12 +4,13 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from users.views import RegisterView, UserViewSet, ProfileView, ChangePasswordView
-from shop.views import ProductViewSet, OrderViewSet, AnalyticsView
+from shop.views import ProductViewSet, OrderViewSet, AnalyticsView, InventoryTransactionViewSet
 from chat.views import MessageViewSet
 
 router = DefaultRouter()
 router.register(r'products', ProductViewSet, basename='product')
 router.register(r'orders',   OrderViewSet,   basename='order')
+router.register(r'inventory-transactions', InventoryTransactionViewSet, basename='inventory-transaction')
 router.register(r'chat',     MessageViewSet, basename='message')
 router.register(r'users',    UserViewSet,    basename='user')
 

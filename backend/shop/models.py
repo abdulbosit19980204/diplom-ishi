@@ -36,3 +36,20 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity}x {self.product.name if self.product else 'Deleted Product'}"
+
+class InventoryTransaction(models.Model):
+    TYPE_CHOICES = (
+        ('SALE', 'Sotuv'),
+        ('RESTOCK', 'Kirim'),
+        ('RETURN', 'Qaytarish'),
+        ('ADJUSTMENT', 'Tuzatish'),
+    )
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='transactions')
+    delta = models.IntegerField() # e.g. -5 for sale, +10 for restock
+    transaction_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return f"{self.transaction_type} | {self.product.name} | {self.delta}"
