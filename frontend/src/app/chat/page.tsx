@@ -1,10 +1,11 @@
+'use client';
 import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import Cookies from 'js-cookie';
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const { username } = useAuthStore();
   const ws = useRef<WebSocket | null>(null);
@@ -17,7 +18,7 @@ export default function ChatPage() {
     const token = Cookies.get('token');
     ws.current = new WebSocket(`ws://localhost:8000/ws/chat/?token=${token}`);
     
-    ws.current.onmessage = (event) => {
+    ws.current.onmessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
       // Append real-time message to state
       setMessages((prev: any) => {
