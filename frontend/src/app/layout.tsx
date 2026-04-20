@@ -7,8 +7,9 @@ import Topbar  from '@/components/Topbar';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'ShopAdmin — E-Commerce Management',
-  description: 'Premium SaaS dashboard for online shop management',
+  title: 'ShopAdmin — E-Commerce Boshqaruv Tizimi',
+  description: 'Premium SaaS dashboard onlayn do\'kon boshqaruvi uchun',
+  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
