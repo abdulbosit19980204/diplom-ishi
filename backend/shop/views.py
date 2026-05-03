@@ -18,18 +18,20 @@ class ProductViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = Product.objects.all().order_by('-created_at')
         
+        if not user.is_authenticated:
+            return queryset # Mehmonlar hamma narsani ko'ra oladi (Shop uchun)
+
         # 1. Superuser va Admin hamma narsani ko'radi
-        if user.is_authenticated and (user.is_superuser or user.role == 'ADMIN'):
+        if user.is_superuser or user.role == 'ADMIN':
             if self.request.query_params.get('my_products') == 'true':
                 return queryset.filter(created_by=user)
             return queryset
             
-        # 2. Manager o'zining mahsulotlarini boshqarishi uchun 'my_products' ishlatadi
-        if user.is_authenticated and user.role == 'MANAGER':
-            if self.request.query_params.get('my_products') == 'true':
-                return queryset.filter(created_by=user)
-            return queryset # Shop da hamma narsani ko'radi
+        # 2. Manager va Customer faqat o'zinikini ko'radi (Management qismida)
+        if self.request.query_params.get('my_products') == 'true':
+            return queryset.filter(created_by=user)
             
+        # 3. Shop qismida hamma narsani ko'radi
         return queryset
 
     def get_permissions(self):

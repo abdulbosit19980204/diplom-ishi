@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, LayoutGrid, List, Edit2, Trash2, X, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 
@@ -10,12 +11,14 @@ interface Product {
   description: string;
   price: string;
   stock: number;
+  created_by?: number;
   created_by_name?: string;
 }
 
 const EMPTY: Omit<Product, 'id'> = { name: '', description: '', price: '', stock: 0 };
 
 export default function ProductsPage() {
+  const { userId, role, isSuperuser } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [view, setView] = useState<'table' | 'grid'>('table');
   const [search, setSearch] = useState('');
@@ -153,16 +156,22 @@ export default function ProductsPage() {
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="btn btn-ghost w-12 h-12 p-0 rounded-xl text-blue-400 hover:bg-blue-500/10" 
-                          onClick={() => openEdit(p)}
-                          title="Tahrirlash">
-                          {mounted && <Edit2 size={32} />}
-                        </button>
-                        <button className="btn btn-ghost w-12 h-12 p-0 rounded-xl text-red-400 hover:bg-red-500/10" 
-                          onClick={() => setDeleteConfirm(p.id)}
-                          title="O'chirish">
-                          {mounted && <Trash2 size={32} />}
-                        </button>
+                        {(isSuperuser || role === 'ADMIN' || p.created_by === Number(userId)) ? (
+                          <>
+                            <button className="btn btn-ghost w-12 h-12 p-0 rounded-xl text-blue-400 hover:bg-blue-500/10" 
+                              onClick={() => openEdit(p)}
+                              title="Tahrirlash">
+                              {mounted && <Edit2 size={32} />}
+                            </button>
+                            <button className="btn btn-ghost w-12 h-12 p-0 rounded-xl text-red-400 hover:bg-red-500/10" 
+                              onClick={() => setDeleteConfirm(p.id)}
+                              title="O'chirish">
+                              {mounted && <Trash2 size={32} />}
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-[11px] italic text-gray-500 px-3">Ruxsat yo'q</span>
+                        )}
                       </div>
                     </td>
                   </motion.tr>
