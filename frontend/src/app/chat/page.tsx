@@ -50,7 +50,8 @@ function ChatContent() {
     if (!token) return;
     ws.current?.close();
 
-    const url = `ws://localhost:8000/ws/chat/?token=${token}${activeOrder ? `&order_id=${activeOrder}` : ''}`;
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || (typeof window !== 'undefined' ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/` : 'ws://localhost:8000/ws/');
+    const url = `${wsUrl}chat/?token=${token}${activeOrder ? `&order_id=${activeOrder}` : ''}`;
     const socket = new WebSocket(url);
 
     socket.onopen  = () => setConnected(true);

@@ -7,8 +7,8 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y netcat-openbsd gcc libpq-dev
 
-RUN pip install --upgrade pip
-RUN pip install django djangorestframework djangorestframework-simplejwt psycopg2-binary python-dotenv channels daphne channels-redis
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
