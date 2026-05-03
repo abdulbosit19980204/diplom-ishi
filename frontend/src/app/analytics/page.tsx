@@ -11,8 +11,10 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (!isSuperuser && role !== 'ADMIN' && role !== 'MANAGER') {
       router.push('/dashboard');
       return;
@@ -33,6 +35,8 @@ export default function AnalyticsPage() {
     { label: "Mahsulotlar",     value: data ? data.stats.total_products  : '—',                               icon: Package,      glow: 'kpi-glow-green'  },
     { label: "Mijozlar",        value: data ? data.stats.total_customers : '—',                               icon: Users,        glow: 'kpi-glow-amber'  },
   ];
+
+  if (!mounted) return <div className="p-12"><div className="skeleton h-64 rounded-2xl" /></div>;
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px]">

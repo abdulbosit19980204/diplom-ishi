@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -67,8 +68,14 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { logout, role, username, isSuperuser } = useAuthStore();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (['/', '/login', '/register'].includes(pathname)) return null;
+  if (!mounted) return <div className="w-[220px] shrink-0 h-screen sticky top-0" style={{ background: 'var(--bg-surface)' }} />;
 
   const handleLogout = () => { logout(); router.push('/login'); };
 

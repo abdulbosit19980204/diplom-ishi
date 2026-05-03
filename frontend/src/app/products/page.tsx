@@ -155,22 +155,22 @@ export default function ProductsPage() {
                       </span>
                     </td>
                     <td className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {(isSuperuser || role === 'ADMIN' || p.created_by === Number(userId)) ? (
+                      <div className="flex items-center justify-end gap-3">
+                        {(isSuperuser || role === 'ADMIN' || String(p.created_by) === String(userId)) ? (
                           <>
-                            <button className="btn btn-ghost w-12 h-12 p-0 rounded-xl text-blue-400 hover:bg-blue-500/10" 
+                            <button className="btn btn-ghost w-16 h-16 p-0 rounded-2xl text-blue-400 hover:bg-blue-500/10" 
                               onClick={() => openEdit(p)}
                               title="Tahrirlash">
-                              {mounted && <Edit2 size={32} />}
+                              {mounted && <Edit2 size={48} />}
                             </button>
-                            <button className="btn btn-ghost w-12 h-12 p-0 rounded-xl text-red-400 hover:bg-red-500/10" 
+                            <button className="btn btn-ghost w-16 h-16 p-0 rounded-2xl text-red-400 hover:bg-red-500/10" 
                               onClick={() => setDeleteConfirm(p.id)}
                               title="O'chirish">
-                              {mounted && <Trash2 size={32} />}
+                              {mounted && <Trash2 size={48} />}
                             </button>
                           </>
                         ) : (
-                          <span className="text-[11px] italic text-gray-500 px-3">Ruxsat yo'q</span>
+                          <span className="text-[12px] italic text-gray-500 px-4">Faqat o'z mahsulotingizni tahrirlay olasiz</span>
                         )}
                       </div>
                     </td>

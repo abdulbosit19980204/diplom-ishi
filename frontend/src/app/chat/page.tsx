@@ -42,6 +42,7 @@ function ChatContent() {
   const [newMessage, setNewMessage]       = useState('');
   const [connected, setConnected]         = useState(false);
   const [searchQ, setSearchQ]             = useState('');
+  const [mounted, setMounted]             = useState(false);
   const ws      = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -111,6 +112,7 @@ function ChatContent() {
   }, [activeOrder]);
 
   useEffect(() => {
+    setMounted(true);
     connect();
     loadConversations();
     if (paramUserId && paramName) {
@@ -130,6 +132,12 @@ function ChatContent() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  if (!mounted) return (
+    <div className="flex h-screen items-center justify-center" style={{ background: 'var(--bg-base)' }}>
+      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Yuklanmoqda...</p>
+    </div>
+  );
 
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault();

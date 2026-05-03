@@ -3,7 +3,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from users.views import RegisterView, UserViewSet, ProfileView, ChangePasswordView
+from users.views import RegisterView, UserViewSet, ProfileView, ChangePasswordView, MyTokenObtainPairView
 from shop.views import ProductViewSet, OrderViewSet, AnalyticsView, InventoryTransactionViewSet
 from chat.views import MessageViewSet
 
@@ -19,7 +19,7 @@ urlpatterns = [
 
     # Auth
     path('api/auth/register/', RegisterView.as_view(),        name='auth_register'),
-    path('api/auth/login/',    TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/login/',    MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/refresh/',  TokenRefreshView.as_view(),    name='token_refresh'),
     path('api/auth/profile/',  ProfileView.as_view(),         name='auth_profile'),
     path('api/auth/change-password/', ChangePasswordView.as_view(), name='auth_change_password'),
