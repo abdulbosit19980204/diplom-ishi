@@ -134,9 +134,9 @@ export default function Sidebar() {
                 return (
                   <li key={item.name}>
                     <Link href={item.href} className={`nav-link ${active ? 'active' : ''}`}>
-                      <item.icon size={16} strokeWidth={active ? 2.2 : 1.8} />
+                      <item.icon size={28} strokeWidth={active ? 2.2 : 1.8} />
                       {item.name}
-                      {active && <ChevronRight size={12} className="ml-auto opacity-40" />}
+                      {active && <ChevronRight size={18} className="ml-auto opacity-40" />}
                     </Link>
                   </li>
                 );
@@ -149,11 +149,11 @@ export default function Sidebar() {
       {/* ── Footer ── */}
       <div className="p-3 border-t space-y-0.5" style={{ borderColor: 'var(--border)' }}>
         <Link href="/settings" className={`nav-link ${pathname === '/settings' ? 'active' : ''}`}>
-          <Settings size={16} />
+          <Settings size={28} />
           Sozlamalar
         </Link>
         <button className="nav-link w-full text-left" style={{ color: 'var(--danger)' }} onClick={handleLogout}>
-          <LogOut size={16} />
+          <LogOut size={28} />
           Chiqish
         </button>
       </div>

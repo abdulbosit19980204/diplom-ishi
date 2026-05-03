@@ -295,6 +295,23 @@ body {
 .kpi-glow-purple { box-shadow: inset 0 1px 0 rgba(168,85,247,0.2); }
 .kpi-glow-amber  { box-shadow: inset 0 1px 0 rgba(245,158,11,0.2); }
 
+/* ─── Premium Animations ───────────────────────────────── */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.05); }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes bounce-short {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.animate-bounce-short {
+  animation: bounce-short 1.5s ease-in-out infinite;
+}
+
 /* ─── Responsive helpers ────────────────────────────────── */
 @media (max-width: 768px) {
   .sidebar-full { display: none !important; }

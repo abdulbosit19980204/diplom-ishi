@@ -28,6 +28,7 @@ export default function ProductsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const fetchProducts = () => {
     setLoading(true);
@@ -37,7 +38,10 @@ export default function ProductsPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchProducts(); }, []);
+  useEffect(() => { 
+    setMounted(true);
+    fetchProducts(); 
+  }, []);
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
@@ -148,9 +152,17 @@ export default function ProductsPage() {
                       </span>
                     </td>
                     <td className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button className="btn btn-ghost w-8 h-8 p-0 rounded-lg text-blue-400" onClick={() => openEdit(p)}><Edit2 size={13} /></button>
-                        <button className="btn btn-ghost w-8 h-8 p-0 rounded-lg text-red-400" onClick={() => setDeleteConfirm(p.id)}><Trash2 size={13} /></button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button className="btn btn-ghost w-12 h-12 p-0 rounded-xl text-blue-400 hover:bg-blue-500/10" 
+                          onClick={() => openEdit(p)}
+                          title="Tahrirlash">
+                          {mounted && <Edit2 size={32} />}
+                        </button>
+                        <button className="btn btn-ghost w-12 h-12 p-0 rounded-xl text-red-400 hover:bg-red-500/10" 
+                          onClick={() => setDeleteConfirm(p.id)}
+                          title="O'chirish">
+                          {mounted && <Trash2 size={32} />}
+                        </button>
                       </div>
                     </td>
                   </motion.tr>

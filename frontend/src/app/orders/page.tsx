@@ -18,8 +18,10 @@ export default function OrdersPage() {
   const [search, setSearch]     = useState('');
   const [loading, setLoading]   = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     api.get('orders/')
       .then(r => setOrders(r.data))
       .catch(console.error)
@@ -49,11 +51,14 @@ export default function OrdersPage() {
         {/* Status cards */}
         <div className="grid grid-cols-4 gap-3">
           {statusFlow.map(s => (
-            <div key={s.key} className="card p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                {s.label}
-              </p>
-              <p className="text-xl font-bold mt-1" style={{ color: s.color }}>
+            <div key={s.key} className="card p-4 group hover:border-indigo-500/30 transition-all">
+              <div className="flex justify-between items-start">
+                <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                  {s.label}
+                </p>
+                <s.icon size={14} style={{ color: s.color }} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <p className="text-2xl font-black mt-2" style={{ color: s.color, textShadow: `0 0 15px ${s.color}33` }}>
                 {loading ? '—' : orders.filter(o => o.status === s.key).length}
               </p>
             </div>
@@ -136,7 +141,7 @@ export default function OrdersPage() {
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{selected.user_name}</p>
               </div>
-              <button className="btn btn-ghost w-8 h-8 p-0 rounded-lg" onClick={() => setSelected(null)}><X size={14} /></button>
+              <button className="btn btn-ghost w-8 h-8 p-0 rounded-lg" onClick={() => setSelected(null)}>{mounted && <X size={14} />}</button>
             </div>
 
             {/* Primary Actions */}
@@ -178,12 +183,13 @@ export default function OrdersPage() {
                 return (
                   <div key={s.key} className="flex gap-3 items-start mb-4 last:mb-0">
                     <div className="flex flex-col items-center">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center"
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center transition-all duration-500"
                         style={{
                           background: done ? s.color : 'var(--bg-overlay)',
-                          boxShadow: done ? `0 0 10px ${s.color}55, 0 0 0 2px ${s.color}33` : '0 0 0 2px var(--border)'
+                          boxShadow: done ? `0 0 20px ${s.color}66, 0 0 0 3px ${s.color}22` : '0 0 0 2px var(--border)',
+                          transform: done ? 'scale(1.1)' : 'scale(1)'
                         }}>
-                        <s.icon size={12} color={done ? '#fff' : 'var(--text-muted)'} />
+                        <s.icon size={12} color={done ? '#fff' : 'var(--text-muted)'} className={done ? 'animate-bounce-short' : ''} />
                       </div>
                       {i < statusFlow.length - 1 && (
                         <div className="w-px h-5 mt-1" style={{ background: done ? s.color : 'var(--border)' }} />

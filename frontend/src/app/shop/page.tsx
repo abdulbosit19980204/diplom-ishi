@@ -43,6 +43,7 @@ export default function ShopPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showOrders, setShowOrders] = useState(false);
   const [orderStatus, setOrderStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
   const { items, addItem, removeItem, updateQuantity, clearCart, total } = useCartStore();
 
@@ -249,10 +250,11 @@ export default function ShopPage() {
               return (
                 <motion.div 
                   key={product.id}
-                  className="card group overflow-hidden flex flex-col"
+                  className="card group overflow-hidden flex flex-col cursor-pointer"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
+                  onClick={() => setSelectedProduct(product)}
                 >
                   <div className="aspect-square brand-gradient relative transition-transform group-hover:scale-105 duration-500 flex items-center justify-center opacity-80 group-hover:opacity-100">
                     <ShoppingBag size={64} className="text-white/20" />
@@ -399,6 +401,85 @@ export default function ShopPage() {
               )}
             </motion.aside>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Product Detail Modal */}
+      <AnimatePresence>
+        {selectedProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="card w-full max-w-2xl overflow-hidden flex flex-col md:flex-row gap-0"
+            >
+              <div className="w-full md:w-1/2 aspect-square brand-gradient flex items-center justify-center relative overflow-hidden">
+                 <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
+                 <ShoppingBag size={140} className="text-white/20 relative z-10 animate-pulse-slow" />
+                 <button 
+                   onClick={() => setSelectedProduct(null)} 
+                   className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white md:hidden z-20 hover:bg-black/60 transition-colors"
+                 >
+                   <X size={20} />
+                 </button>
+              </div>
+              
+              <div className="w-full md:w-1/2 p-8 flex flex-col">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-2xl font-black mb-2">{selectedProduct.name}</h2>
+                    <div className="flex items-center gap-2">
+                       <span className={`badge ${selectedProduct.stock > 0 ? 'badge-delivered' : 'badge-cancelled'}`}>
+                         {selectedProduct.stock > 0 ? 'Sotuvda mavjud' : 'Tugagan'}
+                       </span>
+                       <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">
+                         {selectedProduct.stock} dona
+                       </span>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedProduct(null)} className="hidden md:flex btn btn-ghost w-10 h-10 p-0 rounded-xl"><X size={20} /></button>
+                </div>
+
+                <div className="flex items-center gap-3 mb-6 p-3 rounded-2xl bg-white/5 border border-white/5">
+                   <div className="w-10 h-10 rounded-full brand-gradient flex items-center justify-center text-white font-bold">
+                     {(selectedProduct.created_by_name || 'A')[0]}
+                   </div>
+                   <div>
+                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Sotuvchi</p>
+                     <p className="text-sm font-bold">{selectedProduct.created_by_name || 'Admin'}</p>
+                   </div>
+                </div>
+
+                <p className="text-gray-400 text-[15px] leading-relaxed mb-8 flex-1">
+                  {selectedProduct.description || "Ushbu premium mahsulot haqida qo'shimcha ma'mulotlar yaqin orada taqdim etiladi. Sifat va ishonch kafolatlangan."}
+                </p>
+
+                <div className="space-y-4 pt-6 border-t" style={{ borderColor: 'var(--border)' }}>
+                   <div className="flex justify-between items-end">
+                      <div>
+                        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-1">Narxi</p>
+                        <p className="text-3xl font-black text-emerald-400">{fmt(selectedProduct.price)}</p>
+                      </div>
+                      
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addItem({ ...selectedProduct, price: Number(selectedProduct.price), quantity: 1 });
+                          setSelectedProduct(null);
+                          setIsCartOpen(true);
+                        }}
+                        disabled={selectedProduct.stock <= 0}
+                        className="btn btn-primary px-8 py-4 flex items-center gap-2 shadow-xl shadow-indigo-500/20"
+                      >
+                        <Plus size={18} />
+                        Savatga qo'shish
+                      </button>
+                   </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
