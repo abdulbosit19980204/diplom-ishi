@@ -15,6 +15,7 @@ interface Product {
   description: string;
   price: string;
   stock: number;
+  created_by: number;
   created_by_name?: string;
 }
 
@@ -34,7 +35,7 @@ interface Order {
 }
 
 export default function ShopPage() {
-  const { role } = useAuthStore();
+  const { role, userId } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,10 +66,13 @@ export default function ShopPage() {
     fetchAll();
   }, []);
 
-  const filtered = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.description?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products.filter(p => {
+    // O'zi yaratgan mahsulotlarni ko'rmasligi kerak
+    if (userId && p.created_by === Number(userId)) return false;
+    
+    return p.name.toLowerCase().includes(search.toLowerCase()) ||
+           p.description?.toLowerCase().includes(search.toLowerCase());
+  });
 
   const getItemQuantity = (productId: number) => {
     return items.find(i => i.id === productId)?.quantity || 0;

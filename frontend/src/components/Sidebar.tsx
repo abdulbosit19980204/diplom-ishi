@@ -33,6 +33,7 @@ const NAV_CONFIG: NavSection[] = [
     items: [
       { name: 'Bosh sahifa', href: '/dashboard', icon: LayoutDashboard },
       { name: "Do'kon",      href: '/shop',      icon: Package },
+      { name: 'Xabarlar',    href: '/chat',      icon: MessageSquare },
       { name: 'Analitika',   href: '/analytics', icon: BarChart3, roles: ['ADMIN', 'MANAGER'] },
     ],
   },
@@ -49,7 +50,6 @@ const NAV_CONFIG: NavSection[] = [
     roles: ['ADMIN', 'MANAGER'],          // section only visible to these roles
     items: [
       { name: 'Foydalanuvchilar', href: '/users', icon: Users, roles: ['ADMIN'] },
-      { name: 'Xabarlar',         href: '/chat',  icon: MessageSquare },
     ],
   },
 ];

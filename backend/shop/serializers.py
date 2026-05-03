@@ -27,6 +27,19 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
         fields = ('id', 'product', 'product_name', 'delta', 'transaction_type', 'order', 'created_at', 'created_by_name')
         read_only_fields = ('created_at', 'created_by_name')
 
+    def create(self, validated_data):
+        with transaction.atomic():
+            product = validated_data['product']
+            delta = validated_data['delta']
+            
+            # Update product stock
+            product.stock += delta
+            product.save()
+            
+            # Set created_by from context
+            user = self.context['request'].user if 'request' in self.context else None
+            return InventoryTransaction.objects.create(**validated_data, created_by=user)
+
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
     user_name = serializers.ReadOnlyField(source='user.username')

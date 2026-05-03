@@ -4,7 +4,7 @@ import api from '@/lib/api';
 import { motion } from 'framer-motion';
 import { 
   History, ArrowUpCircle, ArrowDownCircle, RefreshCw, 
-  Filter, Calendar, Search, Package, User, Hash
+  Filter, Calendar, Search, Package, User, Hash, Plus, X, Loader2
 } from 'lucide-react';
 
 interface Transaction {
@@ -22,6 +22,13 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('');
   const [search, setSearch] = useState('');
+  
+  // Restock Modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [amount, setAmount] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const fetchTransactions = () => {
     setLoading(true);
@@ -33,7 +40,31 @@ export default function InventoryPage() {
 
   useEffect(() => {
     fetchTransactions();
+    api.get('products/').then(r => setProducts(r.data)).catch(console.error);
   }, []);
+
+  const handleRestock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProduct || !amount || Number(amount) <= 0) return;
+    
+    setSaving(true);
+    try {
+      await api.post('inventory-transactions/', {
+        product: Number(selectedProduct),
+        delta: Number(amount),
+        transaction_type: 'RESTOCK'
+      });
+      setIsModalOpen(false);
+      setAmount('');
+      setSelectedProduct('');
+      fetchTransactions();
+    } catch (err) {
+      console.error(err);
+      alert("Xatolik yuz berdi");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const filtered = transactions.filter(t => {
     const matchesSearch = t.product_name.toLowerCase().includes(search.toLowerCase());
@@ -57,7 +88,14 @@ export default function InventoryPage() {
         </div>
         
         <div className="flex items-center gap-3">
-          <button onClick={fetchTransactions} className="btn btn-secondary p-2.5 rounded-xl">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="btn btn-primary flex items-center gap-2 px-4 h-11"
+          >
+            <Plus size={18} />
+            <span className="hidden sm:inline">Kirim qilish</span>
+          </button>
+          <button onClick={fetchTransactions} className="btn btn-secondary p-2.5 h-11">
              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
@@ -169,6 +207,68 @@ export default function InventoryPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Restock Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="card w-full max-w-md p-6 space-y-6 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold">Yangi Kirim (Restock)</h3>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/5 rounded-lg"><X size={20} /></button>
+            </div>
+
+            <form onSubmit={handleRestock} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase text-gray-500">Mahsulotni tanlang</label>
+                <select 
+                  className="input h-11"
+                  required
+                  value={selectedProduct}
+                  onChange={e => setSelectedProduct(e.target.value)}
+                >
+                  <option value="">Tanlash...</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} (Hozirgi astatka: {p.stock})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase text-gray-500">Miqdor (dona)</label>
+                <input 
+                  type="number"
+                  className="input h-11"
+                  placeholder="Masalan: 50"
+                  required
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)}
+                  className="btn btn-secondary flex-1 py-3"
+                >
+                  Bekor qilish
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={saving}
+                  className="btn btn-primary flex-1 py-3 flex items-center justify-center gap-2"
+                >
+                  {saving ? <Loader2 className="animate-spin" size={18} /> : 'Saqlash'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

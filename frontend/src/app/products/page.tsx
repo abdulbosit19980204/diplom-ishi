@@ -31,7 +31,10 @@ export default function ProductsPage() {
 
   const fetchProducts = () => {
     setLoading(true);
-    api.get('products/').then(r => setProducts(r.data)).catch(console.error).finally(() => setLoading(false));
+    api.get('products/?my_products=true')
+      .then(r => setProducts(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => { fetchProducts(); }, []);
