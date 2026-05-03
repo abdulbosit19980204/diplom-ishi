@@ -15,7 +15,7 @@ router.register(r'chat',     MessageViewSet, basename='message')
 router.register(r'users',    UserViewSet,    basename='user')
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('back-admin/', admin.site.urls),
 
     # Auth
     path('api/auth/register/', RegisterView.as_view(),        name='auth_register'),
