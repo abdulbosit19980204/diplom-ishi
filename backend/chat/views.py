@@ -52,3 +52,22 @@ class MessageViewSet(viewsets.ModelViewSet):
                 }
 
         return Response(list(seen.values()))
+
+    @action(detail=False, methods=['get'], url_path='unread-count')
+    def unread_count(self, request):
+        count = Message.objects.filter(receiver=request.user, is_read=False).count()
+        return Response({'count': count})
+
+    @action(detail=False, methods=['post'], url_path='mark-read')
+    def mark_read(self, request):
+        sender_id = request.data.get('user_id')
+        if not sender_id:
+            return Response({'error': 'user_id is required'}, status=400)
+        
+        Message.objects.filter(
+            sender_id=sender_id, 
+            receiver=request.user, 
+            is_read=False
+        ).update(is_read=True)
+        
+        return Response({'status': 'ok'})

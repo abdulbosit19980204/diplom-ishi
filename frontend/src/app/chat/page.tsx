@@ -108,8 +108,14 @@ function ChatContent() {
         timestamp: m.timestamp,
         order_id: m.order,
       })));
+
+      // Mark as read
+      await api.post('chat/mark-read/', { user_id: conv.user_id });
+      setConversations(prev => prev.map(c => 
+        c.user_id === conv.user_id ? { ...c, unread: 0 } : c
+      ));
     } catch {}
-  }, []); // Remove activeOrder dependency to load all history
+  }, []);
 
   useEffect(() => {
     setMounted(true);

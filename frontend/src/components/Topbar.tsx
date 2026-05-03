@@ -1,8 +1,10 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { Bell, Search } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import ThemeToggle from '@/components/ThemeToggle';
+import api from '@/lib/api';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Bosh sahifa',
@@ -16,6 +18,16 @@ const pageTitles: Record<string, string> = {
 export default function Topbar() {
   const pathname = usePathname();
   const { username, role, isSuperuser } = useAuthStore();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = () => {
+       api.get('chat/unread-count/').then(r => setUnreadCount(r.data.count)).catch(() => {});
+    };
+    fetchUnread();
+    const timer = setInterval(fetchUnread, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   if (['/', '/login', '/register'].includes(pathname)) return null;
 
@@ -41,9 +53,13 @@ export default function Topbar() {
 
       <ThemeToggle />
 
-      <button className="btn btn-ghost relative w-9 h-9 p-0 rounded-lg">
-        <Bell size={16} />
-        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full" style={{ background: 'var(--brand)' }} />
+      <button className="btn btn-ghost relative w-12 h-12 p-0 rounded-2xl hover:bg-white/10 transition-all active:scale-95 group">
+        <Bell size={28} className="text-gray-100 group-hover:text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[12px] font-black px-1.5 rounded-full min-w-[20px] h-[20px] flex items-center justify-center border-2 border-[#0f172a] shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse">
+            {unreadCount}
+          </span>
+        )}
       </button>
 
       <div className="h-6 w-px" style={{ background: 'var(--border-md)' }} />

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import api from '@/lib/api';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, ShoppingCart, MessageSquare,
@@ -69,9 +70,16 @@ export default function Sidebar() {
   const { logout, role, username, isSuperuser } = useAuthStore();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     setMounted(true);
+    const fetchUnread = () => {
+       api.get('chat/unread-count/').then(r => setUnreadCount(r.data.count)).catch(() => {});
+    };
+    fetchUnread();
+    const timer = setInterval(fetchUnread, 30000); // Har 30 soniyada yangilash
+    return () => clearInterval(timer);
   }, []);
 
   if (['/', '/login', '/register'].includes(pathname)) return null;
@@ -143,7 +151,12 @@ export default function Sidebar() {
                     <Link href={item.href} className={`nav-link ${active ? 'active' : ''}`}>
                       <item.icon size={28} strokeWidth={active ? 2.2 : 1.8} />
                       {item.name}
-                      {active && <ChevronRight size={18} className="ml-auto opacity-40" />}
+                      {item.name === 'Xabarlar' && unreadCount > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-[12px] font-black px-2.5 py-1 rounded-full min-w-[24px] text-center shadow-[0_0_12px_rgba(239,68,68,0.5)]">
+                          {unreadCount}
+                        </span>
+                      )}
+                      {active && ! (item.name === 'Xabarlar' && unreadCount > 0) && <ChevronRight size={18} className="ml-auto opacity-40" />}
                     </Link>
                   </li>
                 );
