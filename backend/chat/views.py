@@ -14,15 +14,17 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        order_id = self.request.query_params.get('order_id')
         other_id = self.request.query_params.get('user_id')
+        
+        # User is either sender or receiver
         qs = Message.objects.filter(Q(sender=user) | Q(receiver=user))
-        if order_id:
-            qs = qs.filter(order_id=order_id)
+        
         if other_id:
+            # Only messages between current user and this specific 'other_id'
             qs = qs.filter(
                 Q(sender_id=other_id) | Q(receiver_id=other_id)
             )
+        
         return qs.order_by('timestamp')
 
     def perform_create(self, serializer):

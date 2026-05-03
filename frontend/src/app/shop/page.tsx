@@ -1,11 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingBag, Search, Plus, Minus, X, CheckCircle2, 
-  ArrowRight, ShoppingCart, Loader2, Package, Tag, Clock, ChevronRight
+  ArrowRight, ShoppingCart, Loader2, Package, Tag, Clock, ChevronRight, SlidersHorizontal
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
@@ -44,14 +44,29 @@ export default function ShopPage() {
   const [showOrders, setShowOrders] = useState(false);
   const [orderStatus, setOrderStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filters
+  const [sellerId, setSellerId] = useState('');
+  const [stockLt, setStockLt]   = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [users, setUsers]       = useState<any[]>([]);
   
   const { items, addItem, removeItem, updateQuantity, clearCart, total } = useCartStore();
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
+      const params = new URLSearchParams();
+      if (sellerId) params.append('seller_id', sellerId);
+      if (stockLt)  params.append('stock_lt', stockLt);
+      if (minPrice) params.append('min_price', minPrice);
+      if (maxPrice) params.append('max_price', maxPrice);
+
       const [prodRes, orderRes] = await Promise.all([
-        api.get('products/'),
+        api.get(`products/?${params.toString()}`),
         api.get('orders/')
       ]);
       setProducts(prodRes.data);
@@ -61,11 +76,13 @@ export default function ShopPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sellerId, stockLt, minPrice, maxPrice]);
 
   useEffect(() => {
+    setMounted(true);
     fetchAll();
-  }, []);
+    api.get('users/').then(r => setUsers(r.data)).catch(() => {});
+  }, [fetchAll]);
 
   const filtered = products.filter(p => {
     // O'zi yaratgan mahsulotlarni ko'rmasligi kerak
@@ -146,17 +163,77 @@ export default function ShopPage() {
           </nav>
         </div>
 
+        <div className="flex items-center justify-between mb-4">
+           <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+              <input 
+                className="input pl-10 h-10" 
+                placeholder="Mahsulot qidirish…" 
+                value={search} 
+                onChange={e => setSearch(e.target.value)} 
+              />
+           </div>
+           <button 
+             className={`btn h-10 px-4 gap-2 text-sm transition-all ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
+             onClick={() => setShowFilters(!showFilters)}
+           >
+             <SlidersHorizontal size={16} />
+             {showFilters ? 'Filtrlarni yopish' : 'Filtrlar'}
+             {(sellerId || stockLt || minPrice || maxPrice) && <span className="w-2 h-2 rounded-full bg-red-400 ml-1" />}
+           </button>
+        </div>
+
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mb-6"
+            >
+              <div className="card p-4 bg-surface-lighter border-dashed flex flex-wrap items-center gap-4">
+                 <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Sotuvchi</label>
+                    <select className="input h-9 text-xs w-[170px]" value={sellerId} onChange={e => setSellerId(e.target.value)}>
+                       <option value="">Barcha sotuvchilar</option>
+                       {users.filter(u => u.role !== 'CUSTOMER').map(u => (
+                         <option key={u.id} value={u.id}>{u.username}</option>
+                       ))}
+                    </select>
+                 </div>
+
+                 <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Ombor</label>
+                    <select className="input h-9 text-xs w-[150px]" value={stockLt} onChange={e => setStockLt(e.target.value)}>
+                       <option value="">Barcha miqdorlar</option>
+                       <option value="10">Kam qolgan ({"<"}10)</option>
+                       <option value="5">Juda kam ({"<"}5)</option>
+                       <option value="1">Tugagan (0)</option>
+                    </select>
+                 </div>
+
+                 <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Narx oralig'i</label>
+                    <div className="flex items-center gap-2">
+                       <input type="number" className="input h-9 text-xs w-[90px]" placeholder="Min" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+                       <span className="text-gray-400">—</span>
+                       <input type="number" className="input h-9 text-xs w-[90px]" placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+                    </div>
+                 </div>
+
+                 <div className="flex items-end h-full pt-5">
+                   {(sellerId || stockLt || minPrice || maxPrice) && (
+                     <button className="btn btn-ghost text-[11px] text-red-400 h-9 px-3" onClick={() => {
+                        setSellerId(''); setStockLt(''); setMinPrice(''); setMaxPrice('');
+                     }}>Filtrlarni tozalash</button>
+                   )}
+                 </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="flex items-center gap-4">
-          <div className="relative hidden md:block w-64">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input 
-              className="input pl-9 py-2 text-sm" 
-              placeholder="Qidirish..." 
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          
           <button 
             onClick={() => setIsCartOpen(true)}
             className="btn btn-primary relative px-4 py-2 flex items-center gap-2"

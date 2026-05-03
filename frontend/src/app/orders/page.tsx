@@ -1,9 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Search, X, CheckCircle2, Clock, Truck, Package, ChevronRight, MessageSquare } from 'lucide-react';
+import { Search, X, CheckCircle2, Clock, Truck, Package, ChevronRight, MessageSquare, SlidersHorizontal } from 'lucide-react';
 
 const statusFlow = [
   { key: 'PENDING',   label: 'Kutilmoqda',       icon: Clock,         color: 'var(--warning)' },
@@ -13,20 +14,48 @@ const statusFlow = [
 ];
 
 export default function OrdersPage() {
+  const { role } = useAuthStore();
   const [orders, setOrders]     = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
   const [search, setSearch]     = useState('');
   const [loading, setLoading]   = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted]   = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Filters
+  const [status, setStatus]     = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate]     = useState('');
+  const [customerId, setCustomerId] = useState('');
+  const [users, setUsers]         = useState<any[]>([]); // For customer filter
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+      if (customerId) params.append('customer_id', customerId);
+
+      const r = await api.get(`orders/?${params.toString()}`);
+      setOrders(r.data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [status, startDate, endDate, customerId]);
 
   useEffect(() => {
     setMounted(true);
-    api.get('orders/')
-      .then(r => setOrders(r.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+    fetchOrders();
+    // Load users for the filter if Admin/Manager
+    if (role === 'ADMIN' || role === 'MANAGER') {
+       api.get('users/').then(r => setUsers(r.data)).catch(() => {});
+    }
+  }, [fetchOrders, role]);
 
   const filtered = orders.filter(o =>
     o.id?.toString().includes(search) ||
@@ -64,12 +93,68 @@ export default function OrdersPage() {
             </div>
           ))}
         </div>
-
-        {/* Search */}
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-          <input className="input pl-9" placeholder="Buyurtma ID yoki mijoz ismi…" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="flex items-center justify-between mb-4">
+           <div className="relative w-full max-w-md">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input className="input pl-9 text-sm h-10" placeholder="Buyurtma ID bo'yicha qidirish…" value={search} onChange={e => setSearch(e.target.value)} />
+           </div>
+           <button 
+             className={`btn h-10 px-4 gap-2 text-sm transition-all ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
+             onClick={() => setShowFilters(!showFilters)}
+           >
+             <SlidersHorizontal size={16} />
+             {showFilters ? 'Filtrlarni yopish' : 'Filtrlar'}
+             {(status || startDate || endDate || customerId) && <span className="w-2 h-2 rounded-full bg-red-400 ml-1" />}
+           </button>
         </div>
+
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mb-6"
+            >
+              <div className="card p-4 bg-surface-lighter border-dashed flex flex-wrap items-center gap-3">
+                 <div className="flex flex-col gap-1">
+                   <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Holat</label>
+                   <select className="input h-9 text-xs w-[140px]" value={status} onChange={e => setStatus(e.target.value)}>
+                      <option value="">Barcha holatlar</option>
+                      {statusFlow.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                   </select>
+                 </div>
+
+                 {(role === 'ADMIN' || role === 'MANAGER') && (
+                   <div className="flex flex-col gap-1">
+                     <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Mijoz</label>
+                     <select className="input h-9 text-xs w-[160px]" value={customerId} onChange={e => setCustomerId(e.target.value)}>
+                        <option value="">Barcha mijozlar</option>
+                        {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+                     </select>
+                   </div>
+                 )}
+
+                 <div className="flex flex-col gap-1">
+                   <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Sana oralig'i</label>
+                   <div className="flex items-center gap-2">
+                      <input type="date" className="input h-9 text-xs w-[130px]" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                      <span className="text-gray-400">—</span>
+                      <input type="date" className="input h-9 text-xs w-[130px]" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                   </div>
+                 </div>
+                 
+                 <div className="flex items-end h-full pt-5">
+                   {(status || startDate || endDate || customerId) && (
+                     <button className="btn btn-ghost text-[11px] text-red-400 h-9 px-3" onClick={() => {
+                        setStatus(''); setStartDate(''); setEndDate(''); setCustomerId('');
+                     }}>Filtrlarni tozalash</button>
+                   )}
+                 </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Table */}
         <div className="card overflow-auto flex-1">

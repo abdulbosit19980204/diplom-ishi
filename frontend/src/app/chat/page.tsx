@@ -109,7 +109,7 @@ function ChatContent() {
         order_id: m.order,
       })));
     } catch {}
-  }, [activeOrder]);
+  }, []); // Remove activeOrder dependency to load all history
 
   useEffect(() => {
     setMounted(true);
@@ -226,7 +226,6 @@ function ChatContent() {
                 <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{getRoleLabel(activePeer.role)}</p>
               </div>
               <div className="flex items-center gap-1">
-                {activeOrder && <button className="btn btn-secondary text-[11px] px-3 py-1 mr-2" onClick={() => setActiveOrder(null)}>Umumiy chatga o'tish</button>}
                 <button className="btn btn-ghost w-8 h-8 p-0 rounded-lg"><Phone size={14} /></button>
                 <button className="btn btn-ghost w-8 h-8 p-0 rounded-lg"><Video size={14} /></button>
                 <button className="btn btn-ghost w-8 h-8 p-0 rounded-lg"><MoreHorizontal size={14} /></button>
@@ -244,7 +243,12 @@ function ChatContent() {
                     <motion.div key={m.id} className={`flex ${me ? 'justify-end' : 'justify-start'} ${grouped ? 'mt-0.5' : 'mt-4'}`} initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}>
                       {!me && !grouped && <div className="w-7 h-7 rounded-full mr-2 flex-shrink-0 self-end brand-gradient flex items-center justify-center text-white text-[10px] font-bold">{m.sender[0].toUpperCase()}</div>}
                       {!me && grouped && <div className="w-7 mr-2 flex-shrink-0" />}
-                      <div className="px-3.5 py-2 max-w-[68%] text-[14px] leading-relaxed" style={{ background: me ? 'var(--brand)' : 'var(--bg-elevated)', color: me ? '#fff' : 'var(--text-primary)', borderRadius: me ? '18px 18px 4px 18px' : '18px 18px 18px 4px', boxShadow: me ? '0 2px 12px rgba(99,102,241,0.3)' : '0 2px 8px rgba(0,0,0,0.15)' }}>
+                      <div className="px-3.5 py-2 max-w-[68%] text-[14px] leading-relaxed relative" style={{ background: me ? 'var(--brand)' : 'var(--bg-elevated)', color: me ? '#fff' : 'var(--text-primary)', borderRadius: me ? '18px 18px 4px 18px' : '18px 18px 18px 4px', boxShadow: me ? '0 2px 12px rgba(99,102,241,0.3)' : '0 2px 8px rgba(0,0,0,0.15)' }}>
+                        {m.order_id && (
+                           <div className={`text-[9px] font-bold mb-1 uppercase tracking-tighter ${me ? 'text-white/70' : 'text-indigo-400'}`}>
+                              Buyurtma #{m.order_id}
+                           </div>
+                        )}
                         {m.message}
                         <div className="flex items-center justify-end gap-1 mt-1"><span style={{ fontSize: '10px', opacity: 0.6 }}>{m.timestamp ? fmt(m.timestamp) : ''}</span>{me && <CheckCheck size={11} style={{ opacity: 0.6 }} />}</div>
                       </div>

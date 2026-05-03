@@ -18,20 +18,33 @@ class ProductViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = Product.objects.all().order_by('-created_at')
         
-        if not user.is_authenticated:
-            return queryset # Mehmonlar hamma narsani ko'ra oladi (Shop uchun)
+        # ─── Filtering logic ───
+        seller_id = self.request.query_params.get('seller_id')
+        if seller_id:
+            queryset = queryset.filter(created_by_id=seller_id)
+            
+        stock_lt = self.request.query_params.get('stock_lt')
+        if stock_lt:
+            queryset = queryset.filter(stock__lt=stock_lt)
 
-        # 1. Superuser va Admin hamma narsani ko'radi
+        min_price = self.request.query_params.get('min_price')
+        max_price = self.request.query_params.get('max_price')
+        if min_price: queryset = queryset.filter(price__gte=min_price)
+        if max_price: queryset = queryset.filter(price__lte=max_price)
+
+        if not user.is_authenticated:
+            return queryset
+
+        # 1. Admin/Superuser filter
         if user.is_superuser or user.role == 'ADMIN':
             if self.request.query_params.get('my_products') == 'true':
                 return queryset.filter(created_by=user)
             return queryset
             
-        # 2. Manager va Customer faqat o'zinikini ko'radi (Management qismida)
+        # 2. Manager/Customer context
         if self.request.query_params.get('my_products') == 'true':
             return queryset.filter(created_by=user)
             
-        # 3. Shop qismida hamma narsani ko'radi
         return queryset
 
     def get_permissions(self):
@@ -65,12 +78,29 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        queryset = Order.objects.all().order_by('-created_at')
+        
+        # ─── Filtering logic ───
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+            
+        customer_id = self.request.query_params.get('customer_id')
+        if customer_id:
+            queryset = queryset.filter(user_id=customer_id)
+            
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date:
+            queryset = queryset.filter(created_at__date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(created_at__date__lte=end_date)
+
         if user.is_superuser or user.role == 'ADMIN':
-            return Order.objects.all().order_by('-created_at')
+            return queryset
         if user.role == 'MANAGER':
-            # Menejer faqat o'zining mahsulotlari bor zakazlarni ko'radi
-            return Order.objects.filter(items__product__created_by=user).distinct().order_by('-created_at')
-        return Order.objects.filter(user=user).order_by('-created_at')
+            return queryset.filter(items__product__created_by=user).distinct()
+        return queryset.filter(user=user)
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'create']:
