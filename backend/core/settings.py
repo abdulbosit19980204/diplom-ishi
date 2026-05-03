@@ -68,6 +68,11 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://kurs.robiyaxon.uz",
+    "http://kurs.robiyaxon.uz",
+]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
