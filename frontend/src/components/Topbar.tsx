@@ -25,8 +25,9 @@ export default function Topbar() {
        api.get('chat/unread-count/').then(r => setUnreadCount(r.data.count)).catch(() => {});
     };
     fetchUnread();
-    const timer = setInterval(fetchUnread, 30000);
-    return () => clearInterval(timer);
+    
+    window.addEventListener('refresh-unread-counts', fetchUnread);
+    return () => window.removeEventListener('refresh-unread-counts', fetchUnread);
   }, []);
 
   if (['/', '/login', '/register'].includes(pathname)) return null;

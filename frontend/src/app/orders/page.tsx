@@ -55,6 +55,9 @@ export default function OrdersPage() {
     if (role === 'ADMIN' || role === 'MANAGER') {
        api.get('users/').then(r => setUsers(r.data)).catch(() => {});
     }
+
+    window.addEventListener('refresh-orders', fetchOrders);
+    return () => window.removeEventListener('refresh-orders', fetchOrders);
   }, [fetchOrders, role]);
 
   const filtered = orders.filter(o =>

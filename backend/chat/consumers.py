@@ -100,6 +100,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Send to receiver's personal room
         if receiver_id:
             await self.channel_layer.group_send(f"chat_user_{receiver_id}", payload)
+            # Also notify via global notification system for badge updates
+            await self.channel_layer.group_send(
+                f"user_{receiver_id}", 
+                {
+                    "type": "notify_update",
+                    "data": {"type": "new_message", "sender_id": self.user.id}
+                }
+            )
+        
+        # Send to sender's own room too (for multi-device sync)
+        await self.channel_layer.group_send(f"chat_user_{self.user.id}", payload)
 
         # Also echo back to sender
         await self.send(text_data=json.dumps(payload))
@@ -136,3 +147,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
             content=content,
             order_id=order_id if order_id else None,
         )
+
+class NotificationConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        user = self.scope.get("user")
+        if not user or user.is_anonymous:
+            await self.close()
+            return
+
+        self.user_group = f"user_{user.id}"
+        await self.channel_layer.group_add(self.user_group, self.channel_name)
+        
+        if user.role in ['ADMIN', 'MANAGER']:
+            await self.channel_layer.group_add("managers_group", self.channel_name)
+            
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        user = self.scope.get("user")
+        if user and not user.is_anonymous:
+            await self.channel_layer.group_discard(self.user_group, self.channel_name)
+            if user.role in ['ADMIN', 'MANAGER']:
+                await self.channel_layer.group_discard("managers_group", self.channel_name)
+
+    async def notify_update(self, event):
+        await self.send(text_data=json.dumps(event["data"]))

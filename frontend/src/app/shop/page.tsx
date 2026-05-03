@@ -81,13 +81,16 @@ export default function ShopPage() {
   useEffect(() => {
     setMounted(true);
     fetchAll();
-    api.get('users/').then(r => setUsers(r.data)).catch(() => {});
+    if (role === 'ADMIN' || role === 'MANAGER') {
+       api.get('users/').then(r => setUsers(r.data)).catch(() => {});
+    }
+    
+    window.addEventListener('refresh-orders', fetchAll);
+    return () => window.removeEventListener('refresh-orders', fetchAll);
   }, [fetchAll]);
 
   const filtered = products.filter(p => {
-    // O'zi yaratgan mahsulotlarni ko'rmasligi kerak
     if (userId && p.created_by === Number(userId)) return false;
-    
     return p.name.toLowerCase().includes(search.toLowerCase()) ||
            p.description?.toLowerCase().includes(search.toLowerCase());
   });
@@ -114,7 +117,7 @@ export default function ShopPage() {
       setTimeout(() => {
         setOrderStatus('idle');
         setIsCartOpen(false);
-        fetchAll(); // Refresh orders
+        fetchAll();
       }, 2000);
     } catch (e) {
       setOrderStatus('error');
@@ -137,176 +140,174 @@ export default function ShopPage() {
     }
   };
 
+  if (!mounted) return <div className="p-10 text-center opacity-50">Yuklanmoqda...</div>;
+
   return (
-    <div className="min-h-screen pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-30 glass border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
-        <div className="flex items-center gap-6">
+    <div className="flex-1 flex flex-col min-h-screen">
+      <main className="p-6 md:p-10 flex-1 flex flex-col">
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">Do'kon</h1>
-            <p className="text-[11px] text-gray-500 uppercase tracking-widest font-bold">Premium Buyumlar</p>
+             <div className="flex items-center gap-4 mb-2">
+                <h1 className="text-4xl font-black tracking-tighter" style={{ color: 'var(--text-primary)' }}>
+                  Marketplace
+                </h1>
+                <nav className="flex items-center gap-1 bg-white/5 p-1 rounded-xl">
+                  <button 
+                    onClick={() => setShowOrders(false)}
+                    className={`px-4 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-widest transition-all ${!showOrders ? 'bg-indigo-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                  >
+                    Do'kon
+                  </button>
+                  <button 
+                    onClick={() => setShowOrders(true)} 
+                    className={`px-4 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-widest transition-all ${showOrders ? 'bg-indigo-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                  >
+                    Buyurtmalarim
+                  </button>
+                </nav>
+             </div>
+             <p className="text-gray-500 text-sm font-medium">Siz uchun saralangan premium mahsulotlar</p>
           </div>
           
-          <nav className="hidden sm:flex items-center gap-1 bg-white/5 p-1 rounded-xl">
-             <button 
-               onClick={() => setShowOrders(false)}
-               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${!showOrders ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-gray-500 hover:text-gray-300'}`}
-             >
-               Mahsulotlar
-             </button>
-             <button 
-                onClick={() => setShowOrders(true)} 
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${showOrders ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-gray-500 hover:text-gray-300'}`}
-             >
-               Buyurtmalarim
-             </button>
-          </nav>
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-           <div className="relative w-full max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-              <input 
-                className="input pl-10 h-10" 
-                placeholder="Mahsulot qidirish…" 
-                value={search} 
-                onChange={e => setSearch(e.target.value)} 
-              />
-           </div>
-           <button 
-             className={`btn h-10 px-4 gap-2 text-sm transition-all ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
-             onClick={() => setShowFilters(!showFilters)}
-           >
-             <SlidersHorizontal size={16} />
-             {showFilters ? 'Filtrlarni yopish' : 'Filtrlar'}
-             {(sellerId || stockLt || minPrice || maxPrice) && <span className="w-2 h-2 rounded-full bg-red-400 ml-1" />}
-           </button>
-        </div>
-
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden mb-6"
-            >
-              <div className="card p-4 bg-surface-lighter border-dashed flex flex-wrap items-center gap-4">
-                 <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Sotuvchi</label>
-                    <select className="input h-9 text-xs w-[170px]" value={sellerId} onChange={e => setSellerId(e.target.value)}>
-                       <option value="">Barcha sotuvchilar</option>
-                       {users.filter(u => u.role !== 'CUSTOMER').map(u => (
-                         <option key={u.id} value={u.id}>{u.username}</option>
-                       ))}
-                    </select>
-                 </div>
-
-                 <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Ombor</label>
-                    <select className="input h-9 text-xs w-[150px]" value={stockLt} onChange={e => setStockLt(e.target.value)}>
-                       <option value="">Barcha miqdorlar</option>
-                       <option value="10">Kam qolgan ({"<"}10)</option>
-                       <option value="5">Juda kam ({"<"}5)</option>
-                       <option value="1">Tugagan (0)</option>
-                    </select>
-                 </div>
-
-                 <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Narx oralig'i</label>
-                    <div className="flex items-center gap-2">
-                       <input type="number" className="input h-9 text-xs w-[90px]" placeholder="Min" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
-                       <span className="text-gray-400">—</span>
-                       <input type="number" className="input h-9 text-xs w-[90px]" placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
-                    </div>
-                 </div>
-
-                 <div className="flex items-end h-full pt-5">
-                   {(sellerId || stockLt || minPrice || maxPrice) && (
-                     <button className="btn btn-ghost text-[11px] text-red-400 h-9 px-3" onClick={() => {
-                        setSellerId(''); setStockLt(''); setMinPrice(''); setMaxPrice('');
-                     }}>Filtrlarni tozalash</button>
-                   )}
-                 </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="flex items-center gap-4">
           <button 
             onClick={() => setIsCartOpen(true)}
-            className="btn btn-primary relative px-4 py-2 flex items-center gap-2"
+            className="btn btn-primary relative px-6 h-14 flex items-center gap-3 rounded-2xl shadow-[0_10px_30px_rgba(99,102,241,0.3)] active:scale-95 transition-all"
           >
-            <ShoppingCart size={16} />
-            <span className="hidden sm:inline">Savatcha</span>
+            <ShoppingBag size={22} />
+            <span className="font-bold">Savatcha</span>
             {items.length > 0 && (
-              <span className="absolute -top-2 -right-2 w-5 h-5 brand-gradient rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-white dark:border-gray-900 border-glow animate-bounce">
-                {items.length}
+              <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[11px] font-black w-7 h-7 flex items-center justify-center rounded-full border-4 border-[#0f172a] shadow-lg">
+                {items.reduce((acc, i) => acc + i.quantity, 0)}
               </span>
             )}
           </button>
         </div>
-      </header>
 
-      <main className="p-6 max-w-7xl mx-auto">
+        {!showOrders && (
+          <>
+            {/* ── Filters ── */}
+            <div className="flex items-center justify-between mb-6">
+               <div className="relative w-full max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                  <input 
+                    className="input pl-10 h-11 bg-surface-lighter" 
+                    placeholder="Mahsulot qidirish…" 
+                    value={search} 
+                    onChange={e => setSearch(e.target.value)} 
+                  />
+               </div>
+               <button 
+                 className={`btn h-11 px-5 gap-3 text-sm font-bold transition-all rounded-xl ${showFilters ? 'btn-primary' : 'bg-surface-lighter hover:bg-white/10'}`}
+                 onClick={() => setShowFilters(!showFilters)}
+               >
+                 <SlidersHorizontal size={18} />
+                 {showFilters ? 'Yopish' : 'Filtrlar'}
+                 {(sellerId || stockLt || minPrice || maxPrice) && <span className="w-2 h-2 rounded-full bg-red-400 ml-1 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />}
+               </button>
+            </div>
+
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden mb-8"
+                >
+                  <div className="card p-6 bg-surface-lighter border-dashed flex flex-wrap items-end gap-6">
+                     <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-widest">Sotuvchi</label>
+                        <select className="input h-10 text-xs w-[180px] bg-surface" value={sellerId} onChange={e => setSellerId(e.target.value)}>
+                           <option value="">Barcha sotuvchilar</option>
+                           {users.filter(u => u.role !== 'CUSTOMER').map(u => (
+                             <option key={u.id} value={u.id}>{u.username}</option>
+                           ))}
+                        </select>
+                     </div>
+
+                     <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-widest">Ombor qoldig'i</label>
+                        <select className="input h-10 text-xs w-[160px] bg-surface" value={stockLt} onChange={e => setStockLt(e.target.value)}>
+                           <option value="">Barcha miqdorlar</option>
+                           <option value="10">Kam qolgan ({"<"}10)</option>
+                           <option value="5">Juda kam ({"<"}5)</option>
+                           <option value="1">Tugagan (0)</option>
+                        </select>
+                     </div>
+
+                     <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-widest">Narx oralig'i (so'm)</label>
+                        <div className="flex items-center gap-2">
+                           <input type="number" className="input h-10 text-xs w-[110px] bg-surface" placeholder="Min" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+                           <span className="text-gray-600 font-bold">—</span>
+                           <input type="number" className="input h-10 text-xs w-[110px] bg-surface" placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+                        </div>
+                     </div>
+
+                     <div className="ml-auto">
+                       {(sellerId || stockLt || minPrice || maxPrice) && (
+                         <button className="btn btn-ghost text-[11px] font-black text-red-400 h-10 px-4 hover:bg-red-500/10" onClick={() => {
+                            setSellerId(''); setStockLt(''); setMinPrice(''); setMaxPrice('');
+                         }}>TOZALASH</button>
+                       )}
+                     </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+        )}
+
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {Array(8).fill(0).map((_, i) => (
-              <div key={i} className="card p-4 space-y-4 skeleton-loader" />
-            ))}
+          <div className="flex-1 flex flex-col items-center justify-center space-y-4 py-32">
+             <Loader2 size={48} className="animate-spin text-indigo-500 opacity-20" />
+             <p className="text-sm font-black text-gray-600 tracking-widest animate-pulse uppercase">Yuklanmoqda...</p>
           </div>
         ) : showOrders ? (
           /* ── Orders History ── */
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Clock className="text-indigo-400" size={20} />
-                Mening buyurtmalarim
-              </h2>
-            </div>
-            
             {orders.length === 0 ? (
-              <div className="card p-20 text-center flex flex-col items-center">
-                 <Package size={64} className="text-gray-600 opacity-10 mb-4" />
-                 <p className="text-gray-500">Sizda hali buyurtmalar yo'q.</p>
-                 <button onClick={() => setShowOrders(false)} className="mt-4 text-indigo-400 text-sm font-bold border-b border-indigo-400/30">Hozir xarid qiling</button>
+              <div className="card p-32 text-center flex flex-col items-center opacity-40 border-dashed">
+                 <Package size={80} className="mb-4" />
+                 <p className="text-lg font-black uppercase tracking-tighter">Buyurtmalar mavjud emas</p>
+                 <button onClick={() => setShowOrders(false)} className="mt-6 btn btn-primary px-8">Hozir xarid qilish</button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {orders.map((order) => (
                   <motion.div 
                     key={order.id} 
-                    className="card p-5 hover:border-indigo-400/30 transition-all cursor-pointer group"
-                    whileHover={{ y: -4 }}
+                    className="card p-6 hover:shadow-2xl transition-all cursor-pointer group border-white/5"
+                    whileHover={{ y: -5 }}
                   >
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start mb-6">
                       <div>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Buyurtma ID</p>
-                        <h4 className="font-black text-lg">#{String(order.id).padStart(4, '0')}</h4>
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Buyurtma</p>
+                        <h4 className="font-black text-2xl tracking-tighter">#{String(order.id).padStart(4, '0')}</h4>
                       </div>
-                      <span className={`badge ${getStatusStyle(order.status)}`}>{order.status}</span>
+                      <span className={`badge ${getStatusStyle(order.status)} font-black text-[10px]`}>{order.status}</span>
                     </div>
                     
-                    <div className="space-y-2 mb-4">
-                       {order.items.slice(0, 2).map((item) => (
-                         <div key={item.id} className="flex justify-between text-[13px]">
-                            <span className="text-gray-400">{item.product_name} x {item.quantity}</span>
-                            <span className="font-bold">{fmt(Number(item.price) * item.quantity)}</span>
+                    <div className="space-y-3 mb-6">
+                       {order.items.slice(0, 3).map((item) => (
+                         <div key={item.id} className="flex justify-between text-[13px] font-medium">
+                            <span className="text-gray-400 truncate mr-4">{item.product_name} <span className="text-[10px] font-black text-gray-600">x{item.quantity}</span></span>
+                            <span className="font-bold flex-shrink-0">{fmt(Number(item.price) * item.quantity)}</span>
                          </div>
                        ))}
-                       {order.items.length > 2 && (
-                         <p className="text-[11px] text-indigo-400">va yana {order.items.length - 2} ta mahsulot…</p>
+                       {order.items.length > 3 && (
+                         <p className="text-[11px] text-indigo-400 font-black tracking-widest uppercase">+ {order.items.length - 3} ta mahsulot</p>
                        )}
                     </div>
                     
-                    <div className="pt-4 border-t flex justify-between items-center" style={{ borderColor: 'var(--border)' }}>
+                    <div className="pt-6 border-t border-white/5 flex justify-between items-end">
                       <div>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Jami</p>
-                        <p className="font-black text-emerald-400">{fmt(order.total_price)}</p>
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Jami summa</p>
+                        <p className="font-black text-2xl text-emerald-400 tracking-tighter">{fmt(order.total_price)}</p>
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-indigo-500 transition-all group-hover:text-white">
-                        <ChevronRight size={16} />
+                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-indigo-500 transition-all group-hover:text-white shadow-lg">
+                        <ChevronRight size={20} />
                       </div>
                     </div>
                   </motion.div>
@@ -315,83 +316,90 @@ export default function ShopPage() {
             )}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Package size={48} className="text-gray-600 mb-4 opacity-20" />
-            <h3 className="text-lg font-semibold">Mahsulotlar topilmadi</h3>
+          <div className="flex-1 flex flex-col items-center justify-center space-y-4 py-32 card bg-surface-lighter border-dashed opacity-40">
+             <ShoppingBag size={80} className="mb-4" />
+             <p className="text-xl font-black uppercase tracking-tighter">Mahsulotlar topilmadi</p>
+             <button onClick={() => {setSearch(''); setSellerId('');}} className="btn btn-ghost text-[10px] font-black uppercase tracking-widest">Tozalash</button>
           </div>
         ) : (
           /* ── Product List ── */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {filtered.map((product, idx) => {
               const q = getItemQuantity(product.id);
               return (
                 <motion.div 
                   key={product.id}
-                  className="card group overflow-hidden flex flex-col cursor-pointer"
-                  initial={{ opacity: 0, y: 20 }}
+                  className="card group overflow-hidden flex flex-col cursor-pointer hover:shadow-2xl transition-all border-white/5"
+                  initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
                   onClick={() => setSelectedProduct(product)}
                 >
-                  <div className="aspect-square brand-gradient relative transition-transform group-hover:scale-105 duration-500 flex items-center justify-center opacity-80 group-hover:opacity-100">
-                    <ShoppingBag size={64} className="text-white/20" />
-                    <div className="absolute top-3 left-3">
-                      <span className={`badge ${product.stock > 0 ? 'badge-delivered' : 'badge-cancelled'} text-[10px]`}>
+                  <div className="aspect-square brand-gradient relative transition-transform group-hover:scale-105 duration-700 flex items-center justify-center opacity-90 group-hover:opacity-100 overflow-hidden">
+                    <ShoppingBag size={80} className="text-white/20 drop-shadow-2xl" />
+                    <div className="absolute top-4 left-4">
+                      <span className={`badge ${product.stock > 0 ? 'badge-delivered' : 'badge-cancelled'} text-[10px] font-black shadow-lg`}>
                         {product.stock > 0 ? `${product.stock} dona mavjud` : 'Tugagan'}
                       </span>
                     </div>
+                    {product.stock <= 5 && product.stock > 0 && (
+                      <div className="absolute bottom-4 right-4 bg-red-500 text-white text-[9px] font-black px-2 py-1 rounded-md animate-pulse shadow-lg">
+                        SHOSHILING!
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="p-5 flex-1 flex flex-col">
-                    <div className="mb-1 flex items-center justify-between gap-2 text-[15px]">
-                      <h3 className="font-bold group-hover:text-indigo-400 transition-colors line-clamp-1">{product.name}</h3>
-                    </div>
+                  <div className="p-6 flex-1 flex flex-col">
+                    <h3 className="font-black text-xl mb-2 group-hover:text-indigo-400 transition-colors line-clamp-1 tracking-tight" style={{ color: 'var(--text-primary)' }}>{product.name}</h3>
                     
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <div className="w-4 h-4 rounded-full brand-gradient flex items-center justify-center text-[7px] text-white font-bold">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-6 h-6 rounded-lg brand-gradient flex items-center justify-center text-[10px] text-white font-black shadow-md">
                         {(product.created_by_name || 'A')[0].toUpperCase()}
                       </div>
-                      <span className="text-[11px] font-medium text-gray-500">
+                      <span className="text-[12px] font-bold text-gray-500">
                         {product.created_by_name || 'Admin'}
                       </span>
                     </div>
 
-                    <p className="text-[12px] line-clamp-2 mb-5 flex-1 text-gray-500">
-                      {product.description || "Ushbu mahsulot haqida ma'lumot yo'q."}
+                    <p className="text-[13px] line-clamp-2 mb-6 flex-1 text-gray-500 leading-relaxed italic font-medium">
+                      "{product.description || "Premium sifatdagi tanlov."}"
                     </p>
                     
-                    <div className="flex items-center justify-between mt-auto">
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
                       <div>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Narxi</p>
-                        <p className="font-black text-lg bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Narxi</p>
+                        <p className="font-black text-xl text-green-400 tracking-tighter">
                           {fmt(product.price)}
                         </p>
                       </div>
                       
                       {q > 0 ? (
-                        <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-1 gap-3">
+                        <div className="flex items-center bg-white/5 border border-white/10 rounded-2xl p-1 gap-4 shadow-inner" onClick={e => e.stopPropagation()}>
                           <button 
                             onClick={() => updateQuantity(product.id, -1)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-gray-400"
+                            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors text-gray-400"
                           >
-                            <Minus size={14} />
+                            <Minus size={16} />
                           </button>
-                          <span className="font-black text-sm w-4 text-center">{q}</span>
+                          <span className="font-black text-base w-4 text-center">{q}</span>
                           <button 
                             onClick={() => updateQuantity(product.id, 1)}
                             disabled={q >= product.stock}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-indigo-400 disabled:opacity-30"
+                            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors text-indigo-400 disabled:opacity-30"
                           >
-                            <Plus size={14} />
+                            <Plus size={16} />
                           </button>
                         </div>
                       ) : (
                         <button 
-                          onClick={() => addItem({ ...product, price: Number(product.price), quantity: 1 })}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addItem({ ...product, price: Number(product.price), quantity: 1 });
+                          }}
                           disabled={product.stock <= 0}
-                          className={`btn w-10 h-10 p-0 rounded-xl flex items-center justify-center transition-all ${product.stock > 0 ? 'btn-primary shadow-lg shadow-indigo-500/20 active:scale-95' : 'opacity-30 cursor-not-allowed'}`}
+                          className={`btn w-12 h-12 p-0 rounded-2xl flex items-center justify-center transition-all ${product.stock > 0 ? 'btn-primary shadow-xl shadow-indigo-500/30 active:scale-90 hover:rotate-3' : 'opacity-20 cursor-not-allowed grayscale'}`}
                         >
-                          <Plus size={18} />
+                          <Plus size={24} />
                         </button>
                       )}
                     </div>
@@ -403,52 +411,56 @@ export default function ShopPage() {
         )}
       </main>
 
-      {/* Cart Drawer Overlay (Same as before but with minor UI polish) */}
+      {/* ── Cart Drawer ── */}
       <AnimatePresence>
         {isCartOpen && (
           <>
             <motion.div 
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsCartOpen(false)}
             />
             <motion.aside 
-              className="fixed right-0 top-0 bottom-0 w-full max-w-md z-50 glass border-l flex flex-col shadow-2xl"
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md z-[70] bg-surface border-l flex flex-col shadow-2xl"
               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             >
-              <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 brand-gradient rounded-xl text-white"><ShoppingCart size={20} /></div>
-                  <h2 className="font-bold text-lg">Savatcha</h2>
+              <div className="p-8 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
+                <div className="flex items-center gap-4">
+                  <div className="p-4 brand-gradient rounded-2xl text-white shadow-xl rotate-3"><ShoppingCart size={28} /></div>
+                  <div>
+                    <h2 className="font-black text-3xl tracking-tighter">Savatcha</h2>
+                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em]">{items.length} TA MAHSULOT</p>
+                  </div>
                 </div>
-                <button onClick={() => setIsCartOpen(false)} className="btn btn-ghost w-10 h-10 p-0 rounded-xl"><X size={20} /></button>
+                <button onClick={() => setIsCartOpen(false)} className="btn btn-ghost w-14 h-14 p-0 rounded-2xl hover:rotate-90 transition-all"><X size={28} /></button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto p-8 space-y-6">
                 {items.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                     <ShoppingCart size={32} className="text-gray-600 opacity-20 mb-4" />
-                     <p className="text-sm font-medium text-gray-500">Savatchangiz bo'sh</p>
+                  <div className="flex flex-col items-center justify-center h-full text-center opacity-20">
+                     <ShoppingCart size={100} className="mb-6 stroke-[1px]" />
+                     <p className="text-xl font-black uppercase tracking-[0.3em]">Savatchangiz bo'sh</p>
                   </div>
                 ) : (
                   items.map((item) => (
-                    <div key={item.id} className="flex gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
-                      <div className="w-16 h-16 rounded-xl brand-gradient flex-shrink-0 flex items-center justify-center text-white/30 font-black">
-                        {item.name[0]}
+                    <div key={item.id} className="flex gap-5 p-5 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group">
+                      <div className="w-20 h-20 rounded-2xl brand-gradient flex-shrink-0 flex items-center justify-center text-white/40 font-black text-2xl shadow-lg group-hover:scale-105 transition-transform">
+                        {item.name[0].toUpperCase()}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 flex flex-col">
                         <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-bold text-[14px] truncate">{item.name}</h4>
-                          <button onClick={() => removeItem(item.id)} className="text-gray-500 hover:text-red-400"><X size={14} /></button>
+                          <h4 className="font-black text-lg truncate tracking-tight">{item.name}</h4>
+                          <button onClick={() => removeItem(item.id)} className="text-gray-500 hover:text-red-400 transition-colors p-1"><X size={18} /></button>
                         </div>
-                        <p className="text-[13px] font-bold text-indigo-400 mb-3">{fmt(item.price)}</p>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center bg-black/20 rounded-lg p-0.5">
-                            <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center rounded text-gray-400"><Minus size={12} /></button>
-                            <span className="w-8 text-center text-xs font-bold">{item.quantity}</span>
-                            <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center rounded text-gray-400"><Plus size={12} /></button>
+                        <p className="text-sm font-black text-indigo-400 mb-4 tracking-tighter">{fmt(item.price)}</p>
+                        <div className="flex items-center justify-between mt-auto">
+                          <div className="flex items-center bg-black/40 rounded-2xl p-1 shadow-inner">
+                            <button onClick={() => updateQuantity(item.id, -1)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors"><Minus size={14} /></button>
+                            <span className="w-12 text-center text-base font-black">{item.quantity}</span>
+                            <button onClick={() => updateQuantity(item.id, 1)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors"><Plus size={14} /></button>
                           </div>
-                          <p className="text-[12px] font-black ml-auto">{fmt(item.price * item.quantity)}</p>
+                          <p className="text-lg font-black text-green-400 tracking-tighter">{fmt(item.price * item.quantity)}</p>
                         </div>
                       </div>
                     </div>
@@ -457,22 +469,26 @@ export default function ShopPage() {
               </div>
 
               {items.length > 0 && (
-                <div className="p-6 glass border-t space-y-4" style={{ borderColor: 'var(--border)' }}>
-                  <div className="flex justify-between text-lg font-black">
-                    <span>Jami:</span>
-                    <span className="text-emerald-400">{fmt(total)}</span>
+                <div className="p-10 bg-surface-lighter border-t space-y-8" style={{ borderColor: 'var(--border)' }}>
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-gray-500 font-black uppercase text-[11px] tracking-widest mb-1">Jami to'lov</p>
+                      <p className="text-4xl font-black text-green-400 tracking-tighter leading-none">{fmt(total)}</p>
+                    </div>
+                    <Tag className="text-indigo-500 opacity-20" size={40} />
                   </div>
                   <button 
                     onClick={handleCheckout}
                     disabled={orderStatus !== 'idle'}
-                    className="btn btn-primary w-full py-4 font-bold relative overflow-hidden"
+                    className="btn btn-primary w-full h-18 text-xl font-black relative overflow-hidden shadow-[0_20px_50px_rgba(99,102,241,0.4)] rounded-3xl active:scale-95 transition-all group"
                   >
-                    {orderStatus === 'loading' ? <Loader2 className="animate-spin" size={18} /> : 'Buyurtma berish'}
+                    {orderStatus === 'loading' ? <Loader2 className="animate-spin" size={28} /> : 'BUYURTMA BERISH'}
                     {orderStatus === 'success' && (
-                      <motion.div className="absolute inset-0 bg-emerald-500 flex items-center justify-center" initial={{ y: '100' }} animate={{ y: 0 }}>
+                      <motion.div className="absolute inset-0 bg-emerald-500 flex items-center justify-center" initial={{ y: '100%' }} animate={{ y: 0 }}>
                         Muvaffaqiyatli! 🎉
                       </motion.div>
                     )}
+                    <ArrowRight className="absolute right-6 opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all" size={24} />
                   </button>
                 </div>
               )}
@@ -481,78 +497,105 @@ export default function ShopPage() {
         )}
       </AnimatePresence>
 
-      {/* Product Detail Modal */}
+      {/* ── Product Detail Modal ── */}
       <AnimatePresence>
         {selectedProduct && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="card w-full max-w-2xl overflow-hidden flex flex-col md:flex-row gap-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedProduct(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 40 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 40 }}
+              className="card w-full max-w-4xl overflow-hidden flex flex-col md:flex-row relative max-h-[90vh] shadow-[0_30px_100px_rgba(0,0,0,0.8)] border-white/10"
             >
-              <div className="w-full md:w-1/2 aspect-square brand-gradient flex items-center justify-center relative overflow-hidden">
-                 <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
-                 <ShoppingBag size={140} className="text-white/20 relative z-10 animate-pulse-slow" />
-                 <button 
-                   onClick={() => setSelectedProduct(null)} 
-                   className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white md:hidden z-20 hover:bg-black/60 transition-colors"
-                 >
-                   <X size={20} />
-                 </button>
+              <button 
+                onClick={() => setSelectedProduct(null)}
+                className="absolute top-6 right-6 w-12 h-12 rounded-2xl bg-black/40 hover:bg-black/60 flex items-center justify-center text-white z-10 transition-all border border-white/10 hover:rotate-90 shadow-xl"
+              >
+                <X size={24} />
+              </button>
+
+              {/* Chap taraf: Vizual */}
+              <div className="md:w-1/2 h-72 md:h-auto bg-surface-lighter flex items-center justify-center relative overflow-hidden group border-r border-white/5">
+                <div className="absolute inset-0 brand-gradient opacity-20 group-hover:opacity-30 transition-opacity" />
+                <Package size={180} className="text-indigo-400/40 drop-shadow-[0_20px_50px_rgba(99,102,241,0.5)] relative z-10" />
+                <div className="absolute bottom-8 left-8 bg-indigo-500/20 backdrop-blur-2xl border border-indigo-500/40 px-6 py-2.5 rounded-2xl text-indigo-100 text-xs font-black uppercase tracking-[0.3em] shadow-2xl">
+                   Premium Selection
+                </div>
               </div>
-              
-              <div className="w-full md:w-1/2 p-8 flex flex-col">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h2 className="text-2xl font-black mb-2">{selectedProduct.name}</h2>
-                    <div className="flex items-center gap-2">
-                       <span className={`badge ${selectedProduct.stock > 0 ? 'badge-delivered' : 'badge-cancelled'}`}>
-                         {selectedProduct.stock > 0 ? 'Sotuvda mavjud' : 'Tugagan'}
-                       </span>
-                       <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">
-                         {selectedProduct.stock} dona
-                       </span>
-                    </div>
+
+              {/* O'ng taraf: Tarkib */}
+              <div className="md:w-1/2 p-10 md:p-14 flex flex-col bg-surface overflow-y-auto">
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 mb-8">
+                    <span className="px-4 py-1.5 rounded-xl bg-green-500/10 text-green-500 text-[11px] font-black uppercase tracking-widest border border-green-500/20 shadow-inner">
+                      Sotuvda mavjud
+                    </span>
+                    <div className="h-1.5 w-1.5 rounded-full bg-gray-700" />
+                    <span className="text-gray-400 text-[12px] font-black uppercase tracking-tighter">
+                      {selectedProduct.stock} TA OMBORDA
+                    </span>
                   </div>
-                  <button onClick={() => setSelectedProduct(null)} className="hidden md:flex btn btn-ghost w-10 h-10 p-0 rounded-xl"><X size={20} /></button>
+
+                  <h2 className="text-5xl font-black mb-10 leading-none tracking-tighter" style={{ color: 'var(--text-primary)' }}>
+                    {selectedProduct.name}
+                  </h2>
+
+                  <div className="flex items-center gap-5 mb-12 p-5 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group/seller shadow-inner">
+                    <div className="w-14 h-14 rounded-2xl brand-gradient flex items-center justify-center text-white font-black text-xl shadow-2xl group-hover/seller:rotate-6 transition-transform">
+                      {(selectedProduct.created_by_name || 'A')[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase font-black text-gray-500 tracking-[0.2em] mb-1">Sotuvchi</p>
+                      <p className="text-lg font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+                        {selectedProduct.created_by_name || 'admin'}
+                      </p>
+                    </div>
+                    <ArrowRight className="ml-auto text-gray-700 opacity-0 group-hover/seller:opacity-100 transition-all" size={24} />
+                  </div>
+
+                  <div className="space-y-5 mb-14">
+                    <p className="text-[11px] uppercase font-black text-gray-500 tracking-[0.2em] flex items-center gap-4">
+                       <div className="w-12 h-0.5 bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+                       TAVSIF
+                    </p>
+                    <p className="text-gray-400 text-lg leading-relaxed italic font-medium pl-2 border-l-2 border-white/5">
+                      "{selectedProduct.description || 'Ushbu eksklyuziv mahsulot o\'zining yuqori sifati va betakror dizayni bilan ajralib turadi. Tanlovda adashmaysiz.'}"
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3 mb-6 p-3 rounded-2xl bg-white/5 border border-white/5">
-                   <div className="w-10 h-10 rounded-full brand-gradient flex items-center justify-center text-white font-bold">
-                     {(selectedProduct.created_by_name || 'A')[0]}
-                   </div>
-                   <div>
-                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Sotuvchi</p>
-                     <p className="text-sm font-bold">{selectedProduct.created_by_name || 'Admin'}</p>
-                   </div>
-                </div>
-
-                <p className="text-gray-400 text-[15px] leading-relaxed mb-8 flex-1">
-                  {selectedProduct.description || "Ushbu premium mahsulot haqida qo'shimcha ma'mulotlar yaqin orada taqdim etiladi. Sifat va ishonch kafolatlangan."}
-                </p>
-
-                <div className="space-y-4 pt-6 border-t" style={{ borderColor: 'var(--border)' }}>
-                   <div className="flex justify-between items-end">
-                      <div>
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-1">Narxi</p>
-                        <p className="text-3xl font-black text-emerald-400">{fmt(selectedProduct.price)}</p>
-                      </div>
-                      
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addItem({ ...selectedProduct, price: Number(selectedProduct.price), quantity: 1 });
-                          setSelectedProduct(null);
-                          setIsCartOpen(true);
-                        }}
-                        disabled={selectedProduct.stock <= 0}
-                        className="btn btn-primary px-8 py-4 flex items-center gap-2 shadow-xl shadow-indigo-500/20"
-                      >
-                        <Plus size={18} />
-                        Savatga qo'shish
-                      </button>
-                   </div>
+                <div className="pt-10 border-t border-white/10 mt-auto">
+                  <div className="flex items-end justify-between mb-8">
+                     <div>
+                        <p className="text-[11px] uppercase font-black text-gray-500 tracking-widest mb-2">Tanlangan mahsulot narxi</p>
+                        <p className="text-5xl font-black text-green-400 flex items-baseline gap-2 tracking-tighter leading-none">
+                           <span className="text-base font-black text-green-500/40 uppercase tracking-tighter">so'm</span>
+                           {fmt(selectedProduct.price).replace("so'm", "").trim()}
+                        </p>
+                     </div>
+                     <ShoppingBag className="text-green-500/10 mb-1" size={64} />
+                  </div>
+                  
+                  <button 
+                    onClick={() => {
+                      addItem({ ...selectedProduct, price: Number(selectedProduct.price), quantity: 1 });
+                      setSelectedProduct(null);
+                      setIsCartOpen(true);
+                    }}
+                    className="btn btn-primary h-20 w-full text-xl font-black shadow-[0_20px_60px_rgba(99,102,241,0.5)] flex items-center justify-center gap-5 active:scale-[0.96] transition-all rounded-[2rem] relative overflow-hidden group"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                    <Plus size={28} className="group-hover:rotate-180 transition-transform duration-500" />
+                    SAVATGA QO'SHISH
+                  </button>
                 </div>
               </div>
             </motion.div>

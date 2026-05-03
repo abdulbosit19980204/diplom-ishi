@@ -78,8 +78,10 @@ export default function Sidebar() {
        api.get('chat/unread-count/').then(r => setUnreadCount(r.data.count)).catch(() => {});
     };
     fetchUnread();
-    const timer = setInterval(fetchUnread, 30000); // Har 30 soniyada yangilash
-    return () => clearInterval(timer);
+    
+    // Listen for global real-time events
+    window.addEventListener('refresh-unread-counts', fetchUnread);
+    return () => window.removeEventListener('refresh-unread-counts', fetchUnread);
   }, []);
 
   if (['/', '/login', '/register'].includes(pathname)) return null;

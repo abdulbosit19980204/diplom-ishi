@@ -121,6 +121,14 @@ function ChatContent() {
     setMounted(true);
     connect();
     loadConversations();
+    window.addEventListener('refresh-unread-counts', loadConversations);
+    return () => {
+        ws.current?.close();
+        window.removeEventListener('refresh-unread-counts', loadConversations);
+    };
+  }, [connect, loadConversations]);
+
+  useEffect(() => {
     if (paramUserId && paramName) {
       const peer = {
         user_id: parseInt(paramUserId),
