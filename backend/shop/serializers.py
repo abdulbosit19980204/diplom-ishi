@@ -43,11 +43,25 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
     user_name = serializers.ReadOnlyField(source='user.username')
+    seller_id = serializers.SerializerMethodField()
+    seller_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = ('id', 'user', 'user_name', 'status', 'total_price', 'items', 'created_at', 'updated_at')
+        fields = ('id', 'user', 'user_name', 'seller_id', 'seller_name', 'status', 'total_price', 'items', 'created_at', 'updated_at')
         read_only_fields = ('user', 'total_price', 'created_at', 'updated_at')
+
+    def get_seller_id(self, obj):
+        first_item = obj.items.first()
+        if first_item and first_item.product:
+            return first_item.product.created_by_id
+        return None
+
+    def get_seller_name(self, obj):
+        first_item = obj.items.first()
+        if first_item and first_item.product and first_item.product.created_by:
+            return first_item.product.created_by.username
+        return "Sotuvchi"
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])

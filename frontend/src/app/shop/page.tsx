@@ -5,9 +5,10 @@ import { useCartStore } from '@/store/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingBag, Search, Plus, Minus, X, CheckCircle2, 
-  ArrowRight, ShoppingCart, Loader2, Package, Tag, Clock, ChevronRight, SlidersHorizontal, Truck
+  ArrowRight, ShoppingCart, Loader2, Package, Tag, Clock, ChevronRight, SlidersHorizontal, Truck, MessageSquare
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import Link from 'next/link';
 
 interface Product {
   id: number;
@@ -31,6 +32,8 @@ interface Order {
   items: OrderItem[];
   total_price: string;
   status: string;
+  seller_id: number;
+  seller_name: string;
   created_at: string;
 }
 
@@ -369,14 +372,25 @@ export default function ShopPage() {
                        )}
                     </div>
                     
-                    <div className="pt-6 border-t border-white/5 flex justify-between items-end">
-                      <div>
-                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Jami summa</p>
-                        <p className="font-black text-2xl text-emerald-400 tracking-tighter">{fmt(order.total_price)}</p>
-                      </div>
-                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-indigo-500 transition-all group-hover:text-white shadow-lg">
-                        <ChevronRight size={20} />
-                      </div>
+                    <div className="pt-6 border-t border-white/5 space-y-4">
+                       <div className="flex justify-between items-end">
+                          <div>
+                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Jami summa</p>
+                            <p className="font-black text-2xl text-emerald-400 tracking-tighter">{fmt(order.total_price)}</p>
+                          </div>
+                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-indigo-500 transition-all group-hover:text-white shadow-lg">
+                            <ChevronRight size={20} />
+                          </div>
+                       </div>
+
+                       <Link 
+                         href={`/chat?orderId=${order.id}&userId=${order.seller_id}&name=${order.seller_name}`}
+                         onClick={(e) => e.stopPropagation()}
+                         className="btn btn-secondary w-full py-3 text-[12px] flex items-center justify-center gap-2 group/btn"
+                       >
+                         <MessageSquare size={16} className="group-hover/btn:rotate-12 transition-transform" />
+                         <span>Sotuvchi bilan bog'lanish</span>
+                       </Link>
                     </div>
                   </motion.div>
                 ))}

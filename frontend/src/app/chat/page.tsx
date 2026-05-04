@@ -63,8 +63,11 @@ function ChatContent() {
       if (data.type === 'chat_message') {
         if (!activeOrder || String(data.order_id) === String(activeOrder)) {
           setMessages(prev => {
-            if (prev.find(m => m.id === data.id)) return prev;
-            return [...prev, {
+            // Remove optimistic message sent by this client (identified by sender_id: -1)
+            const filtered = prev.filter(m => !(m.sender_id === -1 && m.message === data.message));
+            
+            if (filtered.find(m => m.id === data.id)) return filtered;
+            return [...filtered, {
               id: data.id,
               sender: data.sender,
               sender_id: data.sender_id,
