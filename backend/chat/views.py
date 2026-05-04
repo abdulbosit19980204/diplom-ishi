@@ -60,6 +60,9 @@ class MessageViewSet(viewsets.ModelViewSet):
                 {"type": "notify_update", "data": {"type": "new_message", "sender_id": saved.sender.id}}
             )
         
+        # Send to sender's room as well (for multi-device sync and instant update)
+        async_to_sync(channel_layer.group_send)(f"chat_user_{saved.sender.id}", payload)
+        
         # Send to order room if exists
         if saved.order:
             async_to_sync(channel_layer.group_send)(f"chat_order_{saved.order.id}", payload)

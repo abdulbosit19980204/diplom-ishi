@@ -20,8 +20,10 @@ export default function Topbar() {
   const pathname = usePathname();
   const { username, role, isSuperuser } = useAuthStore();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const fetchUnread = () => {
        api.get('chat/unread-count/').then(r => setUnreadCount(r.data.count)).catch(() => {});
     };
@@ -32,6 +34,7 @@ export default function Topbar() {
   }, []);
 
   if (['/', '/login', '/register'].includes(pathname)) return null;
+  if (!mounted) return <header className="h-14 border-b glass" style={{ borderColor: 'var(--border)' }} />;
 
   const roleNames: Record<string, string> = {
     ADMIN: 'Admin',

@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Search, Phone, Video, MoreHorizontal,
   CheckCheck, Check, Circle, Wifi, WifiOff, ArrowLeft, ChevronLeft,
-  Paperclip, Loader2, Package
+  Paperclip, Loader2, Package, X
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
@@ -78,7 +78,7 @@ const MessageBubble = memo(({ m, me, grouped, fmt, getMediaUrl }: { m: Message, 
 });
 
 function ChatContent() {
-  const { username } = useAuthStore();
+  const { username, userId } = useAuthStore();
   const searchParams = useSearchParams();
   const paramOrderId = searchParams.get('orderId');
   const paramUserId  = searchParams.get('userId');
@@ -91,12 +91,22 @@ function ChatContent() {
   const [newMessage, setNewMessage]       = useState('');
   const [connected, setConnected]         = useState(false);
   const [uploading, setUploading]         = useState(false);
+  const [selectedFile, setSelectedFile]   = useState<File | null>(null);
+  const [filePreview, setFilePreview]     = useState<string | null>(null);
+  const [peerTyping, setPeerTyping]       = useState(false);
   const [searchQ, setSearchQ]             = useState('');
   const [mounted, setMounted]             = useState(false);
   const ws      = useRef<WebSocket | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const activePeerRef = useRef<Conversation | null>(null);
+
+  useEffect(() => {
+    activePeerRef.current = activePeer;
+  }, [activePeer]);
 
   const connect = useCallback(() => {
     const token = Cookies.get('token');
@@ -107,46 +117,59 @@ function ChatContent() {
     const url = `${wsUrl}chat/?token=${token}${activeOrder ? `&order_id=${activeOrder}` : ''}`;
     const socket = new WebSocket(url);
 
-    socket.onopen  = () => setConnected(true);
-    socket.onclose = () => { setConnected(false); setTimeout(connect, 3000); };
+    socket.onopen  = () => {
+      setConnected(true);
+      console.log('Chat Socket connected.');
+    };
+    socket.onclose = () => { 
+      setConnected(false); 
+      console.log('Chat Socket closed. Reconnecting...');
+      if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+      setTimeout(connect, 3000); 
+    };
     socket.onerror = () => setConnected(false);
+    
+    // Ping to keep alive
+    if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+    pingIntervalRef.current = setInterval(() => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'ping' }));
+      }
+    }, 25000);
+
     socket.onmessage = (ev) => {
       const data = JSON.parse(ev.data);
       if (data.type === 'chat_message') {
-        setMessages(prev => {
-          if (prev.find(m => m.id === data.id)) return prev;
-          
-          return [...prev, {
-            id: data.id,
-            sender: data.sender,
-            sender_id: data.sender_id,
-            message: data.message,
-            file: data.file,
-            file_name: data.file_name,
-            is_image: data.is_image,
-            timestamp: data.timestamp,
-            order_id: data.order_id,
-          }];
-        });
+        const currentPeer = activePeerRef.current;
+        const isFromActive = String(data.sender_id) === String(currentPeer?.user_id);
+        const isToActive   = String(data.sender_id) === String(userId) && String(data.receiver_id) === String(currentPeer?.user_id);
         
-        setConversations(prev => {
-          const exists = prev.find(c => c.user_id === data.sender_id);
-          const preview = data.message || (data.file_name ? `📎 ${data.file_name}` : '[Fayl]');
-          
-          if (!exists) {
-            loadConversations();
-            return prev;
-          }
-          return prev.map(c =>
-            c.user_id === data.sender_id || c.user_id === (data.receiver_id || -1)
-              ? { ...c, last_message: preview, timestamp: data.timestamp }
-              : c
-          );
-        });
+        if (isFromActive || isToActive) {
+          setMessages(prev => {
+            if (prev.find(m => m.id === data.id)) return prev;
+            return [...prev, {
+              id: data.id,
+              sender: data.sender,
+              sender_id: data.sender_id,
+              message: data.message,
+              file: data.file,
+              file_name: data.file_name,
+              is_image: data.is_image,
+              timestamp: data.timestamp,
+              order_id: data.order_id,
+            }];
+          });
+        }
+        setPeerTyping(false);
+        loadConversations();
+      } else if (data.type === 'typing' && data.sender_id === activePeerRef.current?.user_id) {
+        setPeerTyping(true);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => setPeerTyping(false), 3000);
       }
     };
     ws.current = socket;
-  }, [activeOrder]);
+  }, [activeOrder, userId]); // activePeer is now via ref
 
   const loadConversations = useCallback(async () => {
     try {
@@ -185,14 +208,20 @@ function ChatContent() {
 
   useEffect(() => {
     setMounted(true);
-    connect();
     loadConversations();
     window.addEventListener('refresh-unread-counts', loadConversations);
     return () => {
-        ws.current?.close();
         window.removeEventListener('refresh-unread-counts', loadConversations);
+        if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+        ws.current?.close();
     };
-  }, [connect, loadConversations]);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      connect();
+    }
+  }, [mounted, connect, activeOrder]);
 
   useEffect(() => {
     if (paramUserId && paramName) {
@@ -228,38 +257,49 @@ function ChatContent() {
 
   const sendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!newMessage.trim() || !activePeer) return;
-
-    try {
-      const formData = new FormData();
-      formData.append('content', newMessage.trim());
-      formData.append('receiver', String(activePeer.user_id));
-      if (activeOrder) formData.append('order', activeOrder);
-
-      await api.post('chat/', formData);
-      setNewMessage('');
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !activePeer) return;
+    if (!newMessage.trim() && !selectedFile) return;
 
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('receiver', String(activePeer.user_id));
+      formData.append('content', newMessage.trim());
+      formData.append('receiver', String(activePeer?.user_id));
       if (activeOrder) formData.append('order', activeOrder);
+      if (selectedFile) formData.append('file', selectedFile);
 
       await api.post('chat/', formData);
+      setNewMessage('');
+      setSelectedFile(null);
+      setFilePreview(null);
     } catch (err) {
       console.error(err);
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedFile(file);
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setFilePreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreview(null);
+    }
+  };
+
+  const lastTypingTimeRef = useRef<number>(0);
+  const sendTyping = () => {
+    const now = Date.now();
+    if (now - lastTypingTimeRef.current < 2000) return;
+    lastTypingTimeRef.current = now;
+    
+    if (ws.current?.readyState === WebSocket.OPEN && activePeer) {
+      ws.current.send(JSON.stringify({ type: 'typing', receiver_id: activePeer.user_id }));
     }
   };
 
@@ -354,8 +394,8 @@ function ChatContent() {
                   <p className="text-[13px] md:text-[14px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>{activePeer.username}</p>
                   {activeOrder && <span className="badge badge-pending text-[9px] px-1.5 py-0.5 whitespace-nowrap">#{activeOrder}</span>}
                 </div>
-                <p className={`text-[10px] md:text-[11px] font-medium tracking-wide ${activePeer.is_online ? 'text-green-500' : 'opacity-60'}`}>
-                   {getStatusText(activePeer)}
+                <p className={`text-[10px] md:text-[11px] font-medium tracking-wide ${peerTyping ? 'text-green-400 animate-pulse' : (activePeer.is_online ? 'text-green-500' : 'opacity-60')}`}>
+                   {peerTyping ? 'yozmoqda...' : getStatusText(activePeer)}
                 </p>
               </div>
               <div className="flex items-center gap-0.5 md:gap-1">
@@ -377,10 +417,26 @@ function ChatContent() {
               <div ref={bottomRef} />
             </div>
 
-            <div className="px-5 py-3 border-t glass flex flex-col gap-2" style={{ borderColor: 'var(--border)' }}>
-               {uploading && (
+            <div className="px-5 py-3 border-t glass flex flex-col gap-2 relative" style={{ borderColor: 'var(--border)' }}>
+               {selectedFile && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/10 mb-1 max-w-sm">
+                     {filePreview ? (
+                        <img src={filePreview} className="w-10 h-10 rounded-lg object-cover" />
+                     ) : (
+                        <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center"><Package size={18} className="text-indigo-400" /></div>
+                     )}
+                     <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>{selectedFile.name}</p>
+                        <p className="text-[10px] opacity-60">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                     </div>
+                     <button onClick={() => { setSelectedFile(null); setFilePreview(null); }} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
+                        <X size={16} />
+                     </button>
+                  </motion.div>
+               )}
+               {uploading && !selectedFile && (
                   <div className="flex items-center gap-2 text-[11px] text-indigo-400 animate-pulse font-bold uppercase tracking-widest px-2">
-                     <Loader2 size={12} className="animate-spin" /> Fayl yuklanmoqda...
+                     <Loader2 size={12} className="animate-spin" /> Xabar yuborilmoqda...
                   </div>
                )}
                <div className="flex items-end gap-3">
@@ -393,7 +449,10 @@ function ChatContent() {
                     className="input flex-1 py-2.5 resize-none overflow-y-auto custom-scrollbar leading-tight min-h-[42px] max-h-[150px]" 
                     placeholder="Xabar yozing…" 
                     value={newMessage} 
-                    onChange={e => setNewMessage(e.target.value)}
+                    onChange={e => {
+                      setNewMessage(e.target.value);
+                      sendTyping();
+                    }}
                     onKeyDown={e => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -405,8 +464,8 @@ function ChatContent() {
                     onClick={() => sendMessage()}
                     className="btn btn-primary w-10 h-10 p-0 rounded-xl flex-shrink-0 mb-0.5" 
                     whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} 
-                    disabled={(!newMessage.trim() && !uploading) || !connected} 
-                    style={{ opacity: (newMessage.trim() || uploading) && connected ? 1 : 0.4 }}
+                    disabled={(!newMessage.trim() && !selectedFile) || !connected || uploading} 
+                    style={{ opacity: (newMessage.trim() || selectedFile) && connected ? 1 : 0.4 }}
                   >
                     <Send size={16} />
                   </motion.button>

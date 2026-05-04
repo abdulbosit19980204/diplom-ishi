@@ -72,9 +72,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         data = json.loads(text_data)
+        msg_type     = data.get("type", "chat_message")
         message_text = data.get("message", "").strip()
         receiver_id  = data.get("receiver_id")
         order_id     = data.get("order_id") or getattr(self, "order_id", None)
+
+        if msg_type == "typing":
+            if receiver_id:
+                await self.channel_layer.group_send(
+                    f"chat_user_{receiver_id}",
+                    {"type": "typing", "sender_id": self.user.id}
+                )
+            return
 
         if not message_text:
             return
@@ -120,6 +129,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Also echo back to sender
         await self.send(text_data=json.dumps(payload))
+
+    async def typing(self, event):
+        if event.get("sender_id") == self.user.id:
+            return
+        await self.send(text_data=json.dumps({
+            "type": "typing",
+            "sender_id": event.get("sender_id"),
+        }))
 
     async def chat_message(self, event):
         # Avoid double-receive for sender (sender already got echo)
@@ -177,13 +194,21 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_add("managers_group", self.channel_name)
             
         await self.accept()
-
+        
     async def disconnect(self, close_code):
         user = self.scope.get("user")
         if user and not user.is_anonymous:
             await self.channel_layer.group_discard(self.user_group, self.channel_name)
             if user.role in ['ADMIN', 'MANAGER']:
                 await self.channel_layer.group_discard("managers_group", self.channel_name)
+
+    async def receive(self, text_data):
+        try:
+            data = json.loads(text_data)
+            if data.get('type') == 'ping':
+                await self.send(text_data=json.dumps({'type': 'pong'}))
+        except:
+            pass
 
     async def notify_update(self, event):
         await self.send(text_data=json.dumps(event["data"]))
