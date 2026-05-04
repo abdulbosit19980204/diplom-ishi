@@ -297,17 +297,33 @@ export default function ShopPage() {
                           {/* Progress Line Background */}
                           <div className="absolute top-1/2 -translate-y-1/2 left-0 w-full h-[2px] bg-white/5" />
                           
-                          {/* Active Progress Line */}
+                          {/* Active Progress Line (Static Fill) */}
                           <motion.div 
                             className="absolute top-1/2 -translate-y-1/2 left-0 h-[2px] bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"
                             initial={{ width: 0 }}
                             animate={{ 
                               width: order.status === 'PENDING' ? '0%' : 
-                                     order.status === 'ACCEPTED' ? '33%' : 
-                                     order.status === 'SHIPPED' ? '66%' : '100%' 
+                                     order.status === 'ACCEPTED' ? '33.33%' : 
+                                     order.status === 'SHIPPED' ? '66.66%' : '100%' 
                             }}
                             transition={{ duration: 1, ease: "circOut" }}
                           />
+
+                          {/* ── Active Flow Nur (Towards Next Step) ── */}
+                          {order.status !== 'DELIVERED' && (
+                             <div className="absolute top-1/2 -translate-y-1/2 h-[2px] overflow-hidden"
+                               style={{ 
+                                 left: order.status === 'PENDING' ? '0%' : 
+                                       order.status === 'ACCEPTED' ? '33.33%' : '66.66%',
+                                 width: '33.33%'
+                               }}>
+                                <motion.div 
+                                  className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-indigo-400 to-transparent"
+                                  animate={{ x: ['-100%', '100%'] }}
+                                  transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
+                                />
+                             </div>
+                          )}
 
                           {[
                             { key: 'PENDING', icon: Clock, label: 'Kutilmoqda' },

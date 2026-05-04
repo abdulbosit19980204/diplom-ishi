@@ -269,33 +269,73 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            {/* Timeline */}
-            <div className="p-4 border-b" style={{ borderColor: 'var(--border)' }}>
-              <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Jarayon</p>
-              {statusFlow.map((s, i) => {
-                const si = statusFlow.findIndex(x => x.key === selected.status);
-                const done = i <= si;
-                return (
-                  <div key={s.key} className="flex gap-3 items-start mb-4 last:mb-0">
-                    <div className="flex flex-col items-center">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center transition-all duration-500"
-                        style={{
-                          background: done ? s.color : 'var(--bg-overlay)',
-                          boxShadow: done ? `0 0 20px ${s.color}66, 0 0 0 3px ${s.color}22` : '0 0 0 2px var(--border)',
-                          transform: done ? 'scale(1.1)' : 'scale(1)'
-                        }}>
-                        <s.icon size={12} color={done ? '#fff' : 'var(--text-muted)'} className={done ? 'animate-bounce-short' : ''} />
-                      </div>
-                      {i < statusFlow.length - 1 && (
-                        <div className="w-px h-5 mt-1" style={{ background: done ? s.color : 'var(--border)' }} />
-                      )}
-                    </div>
-                    <p className="text-[13px] pt-0.5" style={{ color: done ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                      {s.label}
-                    </p>
-                  </div>
-                );
-              })}
+            {/* ── Order Stepper ── */}
+            <div className="p-4 border-b bg-surface-lighter/30" style={{ borderColor: 'var(--border)' }}>
+              <p className="text-[10px] font-black uppercase tracking-widest mb-6" style={{ color: 'var(--text-muted)' }}>Jarayon</p>
+              
+              <div className="px-2 mb-4">
+                 <div className="relative flex justify-between items-center">
+                    {/* Background Line */}
+                    <div className="absolute top-1/2 -translate-y-1/2 left-0 w-full h-[2px] bg-white/5" />
+                    
+                    {/* Active Line (Static Fill) */}
+                    <motion.div 
+                      className="absolute top-1/2 -translate-y-1/2 left-0 h-[2px] bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"
+                      initial={{ width: 0 }}
+                      animate={{ 
+                        width: selected.status === 'PENDING' ? '0%' : 
+                               selected.status === 'ACCEPTED' ? '33.33%' : 
+                               selected.status === 'SHIPPED' ? '66.66%' : '100%' 
+                      }}
+                      transition={{ duration: 1, ease: "circOut" }}
+                    />
+
+                    {/* ── Active Flow Nur (Towards Next Step) ── */}
+                    {selected.status !== 'DELIVERED' && (
+                       <div className="absolute top-1/2 -translate-y-1/2 h-[2px] overflow-hidden"
+                         style={{ 
+                           left: selected.status === 'PENDING' ? '0%' : 
+                                 selected.status === 'ACCEPTED' ? '33.33%' : '66.66%',
+                           width: '33.33%'
+                         }}>
+                          <motion.div 
+                            className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-indigo-400 to-transparent"
+                            animate={{ x: ['-100%', '100%'] }}
+                            transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
+                          />
+                       </div>
+                    )}
+
+                    {[
+                      { key: 'PENDING', icon: Clock, label: 'Kutilmoqda' },
+                      { key: 'ACCEPTED', icon: CheckCircle2, label: 'Tasdiqlandi' },
+                      { key: 'SHIPPED', icon: Truck, label: 'Yo\'lda' },
+                      { key: 'DELIVERED', icon: Package, label: 'Yetkazildi' }
+                    ].map((step, idx, arr) => {
+                      const statuses = arr.map(s => s.key);
+                      const currentIdx = statuses.indexOf(selected.status);
+                      const isPast = idx < currentIdx;
+                      const isCurrent = idx === currentIdx;
+
+                      return (
+                        <div key={step.key} className="relative z-10 flex flex-col items-center">
+                           <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-500 ${
+                             isPast ? 'bg-indigo-500 text-white shadow-lg' : 
+                             isCurrent ? 'bg-indigo-500 text-white ring-4 ring-indigo-500/20 scale-110 shadow-lg' : 
+                             'bg-[#1e293b] text-gray-600 border border-white/5'
+                           }`}>
+                              <step.icon size={12} className={isCurrent ? 'animate-pulse' : ''} />
+                           </div>
+                           <p className={`absolute -bottom-6 whitespace-nowrap text-[8px] font-black uppercase tracking-tighter transition-colors duration-500 ${
+                             isCurrent ? 'text-indigo-400' : isPast ? 'text-gray-400' : 'text-gray-600'
+                           }`}>
+                             {step.label}
+                           </p>
+                        </div>
+                      );
+                    })}
+                 </div>
+              </div>
             </div>
 
             {/* Quick update (smaller) */}

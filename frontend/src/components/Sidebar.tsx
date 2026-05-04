@@ -138,7 +138,7 @@ export default function Sidebar() {
       )}
 
       <aside className={`
-        fixed inset-y-0 left-0 z-[60] w-[260px] lg:w-[220px] flex flex-col border-r shrink-0 h-screen sticky top-0
+        fixed lg:static inset-y-0 left-0 z-[60] w-[260px] lg:w-[220px] flex flex-col border-r shrink-0 h-screen
         transition-transform duration-300 ease-in-out bg-[var(--bg-surface)] border-[var(--border)]
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
