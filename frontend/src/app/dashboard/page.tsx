@@ -19,7 +19,7 @@ export default function DashboardPage() {
   useEffect(() => {
     Promise.all([
       api.get('analytics/').then(r => setStats(r.data)).catch(() => {}),
-      api.get('orders/').then(r => setOrders(r.data)).catch(() => {}),
+      api.get('orders/').then(r => setOrders(r.data.results || [])).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -236,7 +236,7 @@ export default function DashboardPage() {
                             transition={{ duration: 0.7, delay: 0.45 + i * 0.06 }} />
                         </div>
                         <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                          {m.month?.slice(5)}
+                          {m.month ? String(m.month).slice(5) : '-'}
                         </p>
                       </div>
                     );
@@ -320,7 +320,7 @@ export default function DashboardPage() {
                     <td key={j}><div className="skeleton h-4 rounded" /></td>
                   ))}</tr>
                 ))
-                : orders.slice(0, 6).map((o: any, i: number) => (
+                : (Array.isArray(orders) ? orders : []).slice(0, 6).map((o: any, i: number) => (
                   <tr key={i} className="cursor-pointer">
                     <td className="font-mono text-[12px] strong">#{String(o.id).padStart(4,'0')}</td>
                     <td>
