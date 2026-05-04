@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   History, ArrowUpCircle, ArrowDownCircle, RefreshCw, 
   Filter, Calendar, Search, Package, User, Hash, Plus, X, Loader2
@@ -22,6 +22,8 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [productId, setProductId] = useState('');
   
   // Restock Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,7 +34,11 @@ export default function InventoryPage() {
 
   const fetchTransactions = () => {
     setLoading(true);
-    api.get('inventory-transactions/')
+    let url = 'inventory-transactions/?';
+    if (productId) url += `&product_id=${productId}`;
+    if (typeFilter) url += `&transaction_type=${typeFilter}`;
+
+    api.get(url)
       .then(r => setTransactions(r.data))
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -42,6 +48,10 @@ export default function InventoryPage() {
     fetchTransactions();
     api.get('products/').then(r => setProducts(r.data)).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [productId, typeFilter]);
 
   const handleRestock = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +97,16 @@ export default function InventoryPage() {
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Mahsulotlar astatkasi va harakatlar tarixi</p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button 
+             className={`btn h-11 px-4 gap-2 text-sm transition-all rounded-xl ${showFilters ? 'btn-primary' : 'bg-white/5 hover:bg-white/10'}`}
+             onClick={() => setShowFilters(!showFilters)}
+           >
+             <Filter size={18} />
+             <span className="hidden md:inline">{showFilters ? 'Yopish' : 'Filtrlar'}</span>
+             {(productId || typeFilter) && <span className="w-2 h-2 rounded-full bg-red-400 ml-1 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />}
+          </button>
+
           <button 
             onClick={() => setIsModalOpen(true)}
             className="btn btn-primary flex items-center gap-2 px-4 h-11"
@@ -101,30 +120,52 @@ export default function InventoryPage() {
         </div>
       </header>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-          <input 
-            className="input pl-10 h-11" 
-            placeholder="Mahsulot nomi bo'yicha qidirish..." 
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-        
-        <select 
-          className="input h-11"
-          value={typeFilter}
-          onChange={e => setTypeFilter(e.target.value)}
-        >
-          <option value="">Barcha turdagi harakatlar</option>
-          <option value="SALE">Sotuvlar</option>
-          <option value="RESTOCK">Kirimlar (Restock)</option>
-          <option value="RETURN">Qaytarilganlar</option>
-          <option value="ADJUSTMENT">Tuzatishlar</option>
-        </select>
-      </div>
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="card p-4 md:p-6 bg-surface-lighter border-dashed flex flex-col sm:flex-row sm:items-end gap-4 md:gap-6">
+               <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-widest">Mahsulot</label>
+                  <select className="input h-10 text-xs w-full sm:w-[200px] bg-surface" value={productId} onChange={e => setProductId(e.target.value)}>
+                     <option value="">Barcha mahsulotlar</option>
+                     {products.map(p => (
+                       <option key={p.id} value={p.id}>{p.name}</option>
+                     ))}
+                  </select>
+               </div>
+
+               <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-widest">Tranzaksiya turi</label>
+                  <select className="input h-10 text-xs w-full sm:w-[160px] bg-surface" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+                     <option value="">Barcha turlar</option>
+                     <option value="SALE">Sotuv</option>
+                     <option value="RESTOCK">Kirim</option>
+                     <option value="RETURN">Qaytarish</option>
+                     <option value="ADJUSTMENT">Tuzatish</option>
+                  </select>
+               </div>
+
+               <div className="relative w-full max-w-sm ml-auto">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input className="input pl-9 text-sm h-10 w-full" placeholder="Qidirish…" value={search} onChange={e => setSearch(e.target.value)} />
+               </div>
+
+               {(productId || typeFilter || search) && (
+                 <button className="btn btn-ghost text-[11px] font-black text-red-400 h-10 px-4 hover:bg-red-500/10" onClick={() => {
+                   setProductId(''); setTypeFilter(''); setSearch('');
+                 }}>
+                   Tozalash
+                 </button>
+               )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="card overflow-hidden">
         <table className="table-base">

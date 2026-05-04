@@ -121,9 +121,19 @@ class OrderViewSet(viewsets.ModelViewSet):
 class InventoryTransactionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
-        if user.is_superuser or user.role == 'ADMIN':
-            return InventoryTransaction.objects.all().order_by('-created_at')
-        return InventoryTransaction.objects.filter(product__created_by=user).order_by('-created_at')
+        queryset = InventoryTransaction.objects.all().order_by('-created_at')
+        if not (user.is_superuser or user.role == 'ADMIN'):
+            queryset = queryset.filter(product__created_by=user)
+
+        product_id = self.request.query_params.get('product_id')
+        if product_id:
+            queryset = queryset.filter(product_id=product_id)
+
+        transaction_type = self.request.query_params.get('transaction_type')
+        if transaction_type:
+            queryset = queryset.filter(transaction_type=transaction_type)
+
+        return queryset
 
     permission_classes = [IsManagerOrAdmin]
     

@@ -5,7 +5,7 @@ import { useCartStore } from '@/store/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingBag, Search, Plus, Minus, X, CheckCircle2, 
-  ArrowRight, ShoppingCart, Loader2, Package, Tag, Clock, ChevronRight, SlidersHorizontal
+  ArrowRight, ShoppingCart, Loader2, Package, Tag, Clock, ChevronRight, SlidersHorizontal, Truck
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
@@ -281,12 +281,64 @@ export default function ShopPage() {
                     className="card p-6 hover:shadow-2xl transition-all cursor-pointer group border-white/5"
                     whileHover={{ y: -5 }}
                   >
-                    <div className="flex justify-between items-start mb-6">
+                    <div className="flex justify-between items-start mb-4">
                       <div>
                         <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Buyurtma</p>
                         <h4 className="font-black text-2xl tracking-tighter">#{String(order.id).padStart(4, '0')}</h4>
                       </div>
-                      <span className={`badge ${getStatusStyle(order.status)} font-black text-[10px]`}>{order.status}</span>
+                      <span className={`badge ${getStatusStyle(order.status)} font-black text-[10px]`}>
+                        {order.status === 'PENDING' ? 'Kutilmoqda' : order.status === 'ACCEPTED' ? 'Tasdiqlandi' : order.status === 'SHIPPED' ? 'Yo\'lda' : 'Yetkazildi'}
+                      </span>
+                    </div>
+
+                    {/* ── Order Stepper ── */}
+                    <div className="mb-8 mt-2">
+                       <div className="relative flex justify-between">
+                          {/* Progress Line Background */}
+                          <div className="absolute top-1/2 -translate-y-1/2 left-0 w-full h-[2px] bg-white/5" />
+                          
+                          {/* Active Progress Line */}
+                          <motion.div 
+                            className="absolute top-1/2 -translate-y-1/2 left-0 h-[2px] bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"
+                            initial={{ width: 0 }}
+                            animate={{ 
+                              width: order.status === 'PENDING' ? '0%' : 
+                                     order.status === 'ACCEPTED' ? '33%' : 
+                                     order.status === 'SHIPPED' ? '66%' : '100%' 
+                            }}
+                            transition={{ duration: 1, ease: "circOut" }}
+                          />
+
+                          {[
+                            { key: 'PENDING', icon: Clock, label: 'Kutilmoqda' },
+                            { key: 'ACCEPTED', icon: CheckCircle2, label: 'Tasdiqlandi' },
+                            { key: 'SHIPPED', icon: Truck, label: 'Yo\'lda' },
+                            { key: 'DELIVERED', icon: Package, label: 'Yetkazildi' }
+                          ].map((step, idx, arr) => {
+                            const statuses = arr.map(s => s.key);
+                            const currentIdx = statuses.indexOf(order.status);
+                            const isPast = idx < currentIdx;
+                            const isCurrent = idx === currentIdx;
+                            const isFuture = idx > currentIdx;
+
+                            return (
+                              <div key={step.key} className="relative z-10 flex flex-col items-center">
+                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 ${
+                                   isPast ? 'bg-indigo-500 text-white' : 
+                                   isCurrent ? 'bg-indigo-500 text-white ring-4 ring-indigo-500/20 scale-110 shadow-lg' : 
+                                   'bg-[#1e293b] text-gray-600 border border-white/5'
+                                 }`}>
+                                    <step.icon size={14} className={isCurrent ? 'animate-pulse' : ''} />
+                                 </div>
+                                 <p className={`absolute -bottom-6 whitespace-nowrap text-[8px] font-black uppercase tracking-tighter transition-colors duration-500 ${
+                                   isCurrent ? 'text-indigo-400' : isPast ? 'text-gray-400' : 'text-gray-600'
+                                 }`}>
+                                   {step.label}
+                                 </p>
+                              </div>
+                            );
+                          })}
+                       </div>
                     </div>
                     
                     <div className="space-y-3 mb-6">

@@ -24,6 +24,14 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [sellerId, setSellerId] = useState('');
+  const [stockLt, setStockLt] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
+
   // Modal state
   const [modal, setModal] = useState<'add' | 'edit' | null>(null);
   const [form, setForm] = useState<Omit<Product, 'id'>>(EMPTY);
@@ -35,7 +43,13 @@ export default function ProductsPage() {
 
   const fetchProducts = () => {
     setLoading(true);
-    api.get('products/?my_products=true')
+    let url = 'products/?my_products=true';
+    if (sellerId) url += `&seller_id=${sellerId}`;
+    if (stockLt) url += `&stock_lt=${stockLt}`;
+    if (minPrice) url += `&min_price=${minPrice}`;
+    if (maxPrice) url += `&max_price=${maxPrice}`;
+
+    api.get(url)
       .then(r => setProducts(r.data))
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -44,7 +58,14 @@ export default function ProductsPage() {
   useEffect(() => { 
     setMounted(true);
     fetchProducts(); 
+    if (isSuperuser || role === 'ADMIN') {
+      api.get('users/').then(r => setUsers(r.data)).catch(() => {});
+    }
   }, []);
+
+  useEffect(() => {
+    if (mounted) fetchProducts();
+  }, [sellerId, stockLt, minPrice, maxPrice]);
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
@@ -86,6 +107,14 @@ export default function ProductsPage() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
             <input className="input pl-9 text-sm h-10 w-full" placeholder="Mahsulot nomi…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          <button 
+             className={`btn h-10 px-4 gap-2 text-sm transition-all rounded-xl ${showFilters ? 'btn-primary' : 'bg-white/5 hover:bg-white/10'}`}
+             onClick={() => setShowFilters(!showFilters)}
+           >
+             <SlidersHorizontal size={16} />
+             <span className="hidden md:inline">{showFilters ? 'Yopish' : 'Filtrlar'}</span>
+             {(sellerId || stockLt || minPrice || maxPrice) && <span className="w-2 h-2 rounded-full bg-red-400 ml-1 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />}
+           </button>
         </div>
         
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -95,10 +124,64 @@ export default function ProductsPage() {
           </div>
           <button className="btn btn-primary h-10 px-4 gap-2 text-sm rounded-xl font-bold active:scale-95 transition-all" onClick={openAdd}>
             <Plus size={16} />
-            <span className="hidden sm:inline">Mahsulot</span>
+            <span className="hidden sm:inline">Mahsulot qo'shish</span>
           </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden mb-6"
+          >
+            <div className="card p-4 md:p-6 bg-surface-lighter border-dashed flex flex-col sm:flex-row sm:items-end gap-4 md:gap-6">
+               {(isSuperuser || role === 'ADMIN') && (
+                 <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-widest">Sotuvchi</label>
+                    <select className="input h-10 text-xs w-full sm:w-[180px] bg-surface" value={sellerId} onChange={e => setSellerId(e.target.value)}>
+                       <option value="">Barcha sotuvchilar</option>
+                       {users.filter(u => u.role !== 'CUSTOMER').map(u => (
+                         <option key={u.id} value={u.id}>{u.username}</option>
+                       ))}
+                    </select>
+                 </div>
+               )}
+
+               <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-widest">Ombor qoldig'i</label>
+                  <select className="input h-10 text-xs w-full sm:w-[160px] bg-surface" value={stockLt} onChange={e => setStockLt(e.target.value)}>
+                     <option value="">Barcha miqdorlar</option>
+                     <option value="10">Kam qolgan ({"<"}10)</option>
+                     <option value="5">Juda kam ({"<"}5)</option>
+                     <option value="1">Tugagan (0)</option>
+                  </select>
+               </div>
+
+               <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-widest">Narx oralig'i (so'm)</label>
+                  <div className="flex items-center gap-2">
+                     <input type="number" className="input h-10 text-xs w-full sm:w-[110px] bg-surface" placeholder="Min" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+                     <span className="text-gray-600 font-bold">—</span>
+                     <input type="number" className="input h-10 text-xs w-full sm:w-[110px] bg-surface" placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+                  </div>
+               </div>
+
+               <div className="sm:ml-auto">
+                 {(sellerId || stockLt || minPrice || maxPrice) && (
+                   <button className="btn btn-ghost text-[11px] font-black text-red-400 h-10 px-4 hover:bg-red-500/10" onClick={() => {
+                     setSellerId(''); setStockLt(''); setMinPrice(''); setMaxPrice('');
+                   }}>
+                     Tozalash
+                   </button>
+                 )}
+               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Table view */}
       {view === 'table' && (
