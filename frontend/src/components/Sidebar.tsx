@@ -71,17 +71,27 @@ export default function Sidebar() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
 
   useEffect(() => {
     setMounted(true);
     const fetchUnread = () => {
        api.get('chat/unread-count/').then(r => setUnreadCount(r.data.count)).catch(() => {});
     };
+    const fetchPendingOrders = () => {
+       api.get('orders/pending-count/').then(r => setPendingOrdersCount(r.data.count)).catch(() => {});
+    };
+
     fetchUnread();
+    fetchPendingOrders();
     
     // Listen for global real-time events
     window.addEventListener('refresh-unread-counts', fetchUnread);
-    return () => window.removeEventListener('refresh-unread-counts', fetchUnread);
+    window.addEventListener('refresh-orders', fetchPendingOrders);
+    return () => {
+      window.removeEventListener('refresh-unread-counts', fetchUnread);
+      window.removeEventListener('refresh-orders', fetchPendingOrders);
+    };
   }, []);
 
   if (['/', '/login', '/register'].includes(pathname)) return null;
@@ -158,7 +168,12 @@ export default function Sidebar() {
                           {unreadCount}
                         </span>
                       )}
-                      {active && ! (item.name === 'Xabarlar' && unreadCount > 0) && <ChevronRight size={18} className="ml-auto opacity-40" />}
+                      {item.name === 'Buyurtmalar' && pendingOrdersCount > 0 && (
+                        <span className="ml-auto bg-amber-500 text-white text-[12px] font-black px-2.5 py-1 rounded-full min-w-[24px] text-center shadow-[0_0_12px_rgba(245,158,11,0.5)] animate-pulse">
+                          {pendingOrdersCount}
+                        </span>
+                      )}
+                      {active && !((item.name === 'Xabarlar' && unreadCount > 0) || (item.name === 'Buyurtmalar' && pendingOrdersCount > 0)) && <ChevronRight size={18} className="ml-auto opacity-40" />}
                     </Link>
                   </li>
                 );
