@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, LayoutGrid, List, Edit2, Trash2, X, SlidersHorizontal, AlertTriangle } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, Grid, Edit2, Trash2, X, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 
 interface Product {
   id: number;
@@ -80,24 +80,30 @@ export default function ProductsPage() {
   return (
     <div className="p-6 space-y-5 max-w-[1400px]">
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-          <input className="input pl-9" placeholder="Mahsulot qidirish…" value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <div className="flex items-center gap-2 ml-auto">
-          <div className="flex items-center surface rounded-lg p-1">
-            <button onClick={() => setView('table')} className={`p-1.5 rounded-md transition-colors ${view === 'table' ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-500 hover:text-gray-300'}`}><List size={15} /></button>
-            <button onClick={() => setView('grid')} className={`p-1.5 rounded-md transition-colors ${view === 'grid' ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-500 hover:text-gray-300'}`}><LayoutGrid size={15} /></button>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="relative w-full max-w-md">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input className="input pl-9 text-sm h-10 w-full" placeholder="Mahsulot nomi…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <button className="btn btn-primary gap-2" onClick={openAdd}><Plus size={14} /> Mahsulot qo'shish</button>
+        </div>
+        
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex bg-white/5 p-1 rounded-xl">
+            <button className={`p-2 rounded-lg transition-all ${view === 'table' ? 'bg-indigo-500 text-white' : 'text-gray-500 hover:text-white'}`} onClick={() => setView('table')}><List size={16} /></button>
+            <button className={`p-2 rounded-lg transition-all ${view === 'grid' ? 'bg-indigo-500 text-white' : 'text-gray-500 hover:text-white'}`} onClick={() => setView('grid')}><Grid size={16} /></button>
+          </div>
+          <button className="btn btn-primary h-10 px-4 gap-2 text-sm rounded-xl font-bold active:scale-95 transition-all" onClick={openAdd}>
+            <Plus size={16} />
+            <span className="hidden sm:inline">Mahsulot</span>
+          </button>
         </div>
       </div>
 
       {/* Table view */}
       {view === 'table' && (
-        <motion.div className="card overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <table className="table-base">
+        <motion.div className="card overflow-x-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <table className="table-base w-full min-w-[700px]">
             <thead>
               <tr>
                 <th>Mahsulot nomi</th>
@@ -187,7 +193,7 @@ export default function ProductsPage() {
 
       {/* Grid view */}
       {view === 'grid' && (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((p, i) => (
             <motion.div key={p.id} className="card p-4 group cursor-pointer"
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}>

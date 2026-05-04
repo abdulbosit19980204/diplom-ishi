@@ -77,11 +77,11 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="p-6 max-w-[1400px] flex gap-5 h-[calc(100vh-56px)] overflow-hidden">
+    <div className="p-4 md:p-6 max-w-[1400px] flex flex-col lg:flex-row gap-5 h-[calc(100vh-56px)] overflow-hidden relative">
       {/* List panel */}
       <div className="flex-1 flex flex-col gap-4 overflow-hidden">
         {/* Status cards */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {statusFlow.map(s => (
             <div key={s.key} className="card p-4 group hover:border-indigo-500/30 transition-all">
               <div className="flex justify-between items-start">
@@ -96,17 +96,17 @@ export default function OrdersPage() {
             </div>
           ))}
         </div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
            <div className="relative w-full max-w-md">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
               <input className="input pl-9 text-sm h-10" placeholder="Buyurtma ID bo'yicha qidirish…" value={search} onChange={e => setSearch(e.target.value)} />
            </div>
            <button 
-             className={`btn h-10 px-4 gap-2 text-sm transition-all ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
+             className={`btn h-10 px-4 gap-2 text-sm transition-all w-full sm:w-auto justify-center ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
              onClick={() => setShowFilters(!showFilters)}
            >
              <SlidersHorizontal size={16} />
-             {showFilters ? 'Filtrlarni yopish' : 'Filtrlar'}
+             {showFilters ? 'Yopish' : 'Filtrlar'}
              {(status || startDate || endDate || customerId) && <span className="w-2 h-2 rounded-full bg-red-400 ml-1" />}
            </button>
         </div>
@@ -218,9 +218,16 @@ export default function OrdersPage() {
       {/* Detail drawer */}
       <AnimatePresence>
         {selected && (
-          <motion.aside className="w-[320px] card flex flex-col shrink-0 overflow-y-auto"
-            initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 28 }}>
+          <>
+            {/* Mobile overlay */}
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+              onClick={() => setSelected(null)}
+            />
+            <motion.aside className="fixed inset-y-0 right-0 z-50 w-[85%] max-w-[340px] lg:relative lg:inset-auto lg:w-[320px] card flex flex-col shrink-0 overflow-y-auto"
+              initial={{ opacity: 0, x: 100 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 100 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--border)' }}>
               <div>
@@ -345,6 +352,7 @@ export default function OrdersPage() {
               )}
             </div>
           </motion.aside>
+          </>
         )}
       </AnimatePresence>
     </div>

@@ -98,7 +98,7 @@ export default function DashboardPage() {
 
       {/* ─── Welcome banner ─── */}
       <motion.div
-        className="relative overflow-hidden rounded-2xl p-6 flex items-center gap-5"
+        className="relative overflow-hidden rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center gap-5"
         style={{
           background: 'linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(168,85,247,0.12) 60%, transparent 100%)',
           border: '1px solid rgba(99,102,241,0.2)',
@@ -131,7 +131,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* ─── KPI Cards ─── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {kpis.map((k, i) => (
           <motion.div key={k.label} className="card p-5 group relative overflow-hidden"
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -302,7 +302,8 @@ export default function DashboardPage() {
             <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Oxirgi buyurtmalar</h3>
             <Link href="/orders" className="text-[12px] text-indigo-400 hover:text-indigo-300 transition">Barchasini ko'rish →</Link>
           </div>
-          <table className="table-base">
+          <div className="overflow-x-auto">
+            <table className="table-base w-full min-w-[600px]">
             <thead>
               <tr>
                 <th>№</th>
@@ -351,11 +352,12 @@ export default function DashboardPage() {
                   </tr>
                 ))
               }
-              {!loading && orders.length === 0 && (
+            {!loading && orders.length === 0 && (
                 <tr><td colSpan={5} className="text-center py-10" style={{ color: 'var(--text-muted)' }}>Buyurtmalar yo'q</td></tr>
               )}
             </tbody>
           </table>
+          </div>
         </motion.div>
       </div>
 

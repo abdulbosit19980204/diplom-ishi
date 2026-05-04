@@ -146,22 +146,22 @@ export default function ShopPage() {
     <div className="flex-1 flex flex-col min-h-screen">
       <main className="p-6 md:p-10 flex-1 flex flex-col">
         {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div>
-             <div className="flex items-center gap-4 mb-2">
-                <h1 className="text-4xl font-black tracking-tighter" style={{ color: 'var(--text-primary)' }}>
+             <div className="flex flex-wrap items-center gap-4 mb-2">
+                <h1 className="text-3xl md:text-4xl font-black tracking-tighter" style={{ color: 'var(--text-primary)' }}>
                   Marketplace
                 </h1>
                 <nav className="flex items-center gap-1 bg-white/5 p-1 rounded-xl">
                   <button 
                     onClick={() => setShowOrders(false)}
-                    className={`px-4 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-widest transition-all ${!showOrders ? 'bg-indigo-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`px-3 md:px-4 py-1.5 rounded-lg text-[9px] md:text-[10px] uppercase font-black tracking-widest transition-all ${!showOrders ? 'bg-indigo-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
                   >
                     Do'kon
                   </button>
                   <button 
                     onClick={() => setShowOrders(true)} 
-                    className={`px-4 py-1.5 rounded-lg text-[10px] uppercase font-black tracking-widest transition-all ${showOrders ? 'bg-indigo-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`px-3 md:px-4 py-1.5 rounded-lg text-[9px] md:text-[10px] uppercase font-black tracking-widest transition-all ${showOrders ? 'bg-indigo-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
                   >
                     Buyurtmalarim
                   </button>
@@ -172,12 +172,12 @@ export default function ShopPage() {
           
           <button 
             onClick={() => setIsCartOpen(true)}
-            className="btn btn-primary relative px-6 h-14 flex items-center gap-3 rounded-2xl shadow-[0_10px_30px_rgba(99,102,241,0.3)] active:scale-95 transition-all"
+            className="btn btn-primary relative w-full md:w-auto px-6 h-12 md:h-14 flex items-center justify-center gap-3 rounded-2xl shadow-[0_10px_30px_rgba(99,102,241,0.3)] active:scale-95 transition-all"
           >
-            <ShoppingBag size={22} />
+            <ShoppingBag size={20} />
             <span className="font-bold">Savatcha</span>
             {items.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[11px] font-black w-7 h-7 flex items-center justify-center rounded-full border-4 border-[#0f172a] shadow-lg">
+              <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[11px] font-black w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full border-4 border-[#0f172a] shadow-lg">
                 {items.reduce((acc, i) => acc + i.quantity, 0)}
               </span>
             )}
@@ -187,7 +187,7 @@ export default function ShopPage() {
         {!showOrders && (
           <>
             {/* ── Filters ── */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                <div className="relative w-full max-w-md">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                   <input 
@@ -198,7 +198,7 @@ export default function ShopPage() {
                   />
                </div>
                <button 
-                 className={`btn h-11 px-5 gap-3 text-sm font-bold transition-all rounded-xl ${showFilters ? 'btn-primary' : 'bg-surface-lighter hover:bg-white/10'}`}
+                 className={`btn h-11 px-5 gap-3 text-sm font-bold transition-all rounded-xl w-full md:w-auto justify-center ${showFilters ? 'btn-primary' : 'bg-surface-lighter hover:bg-white/10'}`}
                  onClick={() => setShowFilters(!showFilters)}
                >
                  <SlidersHorizontal size={18} />
@@ -215,7 +215,7 @@ export default function ShopPage() {
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden mb-8"
                 >
-                  <div className="card p-6 bg-surface-lighter border-dashed flex flex-wrap items-end gap-6">
+                  <div className="card p-4 md:p-6 bg-surface-lighter border-dashed flex flex-col sm:flex-row sm:items-end gap-4 md:gap-6">
                      <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-widest">Sotuvchi</label>
                         <select className="input h-10 text-xs w-[180px] bg-surface" value={sellerId} onChange={e => setSellerId(e.target.value)}>
@@ -323,7 +323,7 @@ export default function ShopPage() {
           </div>
         ) : (
           /* ── Product List ── */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filtered.map((product, idx) => {
               const q = getItemQuantity(product.id);
               return (

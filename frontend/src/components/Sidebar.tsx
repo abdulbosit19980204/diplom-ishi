@@ -70,6 +70,7 @@ export default function Sidebar() {
   const { logout, role, username, isSuperuser } = useAuthStore();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
 
@@ -85,17 +86,26 @@ export default function Sidebar() {
     fetchUnread();
     fetchPendingOrders();
     
+    const handleToggle = () => setIsOpen(prev => !prev);
+    const handleClose = () => setIsOpen(false);
+
+    window.addEventListener('toggle-sidebar', handleToggle);
+    window.addEventListener('close-sidebar', handleClose);
+    
     // Listen for global real-time events
     window.addEventListener('refresh-unread-counts', fetchUnread);
     window.addEventListener('refresh-orders', fetchPendingOrders);
+    
     return () => {
+      window.removeEventListener('toggle-sidebar', handleToggle);
+      window.removeEventListener('close-sidebar', handleClose);
       window.removeEventListener('refresh-unread-counts', fetchUnread);
       window.removeEventListener('refresh-orders', fetchPendingOrders);
     };
   }, []);
 
   if (['/', '/login', '/register'].includes(pathname)) return null;
-  if (!mounted) return <div className="w-[220px] shrink-0 h-screen sticky top-0" style={{ background: 'var(--bg-surface)' }} />;
+  if (!mounted) return null;
 
   const handleLogout = () => { logout(); router.push('/login'); };
 
@@ -118,82 +128,103 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-[220px] flex flex-col border-r shrink-0 h-screen sticky top-0"
-      style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <>
+      {/* ── Overlay (Mobile only) ── */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[55] lg:hidden transition-opacity"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
 
-      {/* ── Logo ── */}
-      <div className="h-14 flex items-center px-5 border-b" style={{ borderColor: 'var(--border)' }}>
-        <div className="w-7 h-7 rounded-lg brand-gradient flex items-center justify-center mr-2.5 glow-brand">
-          <span className="text-white font-black text-sm">S</span>
-        </div>
-        <span className="font-semibold text-[15px]" style={{ color: 'var(--text-primary)' }}>ShopAdmin</span>
-      </div>
-
-      {/* ── User pill ── */}
-      <div className="mx-3 mt-3 px-3 py-2.5 rounded-xl flex items-center gap-2.5"
-        style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-        <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-          {username?.[0]?.toUpperCase() ?? 'U'}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-            {username ?? 'Foydalanuvchi'}
-          </p>
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide"
-            style={{ color: roleColors[role ?? ''] ?? 'var(--text-muted)' }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: roleColors[role ?? ''] ?? 'var(--text-muted)' }} />
-            {roleLabels[role ?? ''] ?? 'Mehmon'}
-          </span>
-        </div>
-      </div>
-
-      {/* ── Nav ── */}
-      <nav className="flex-1 overflow-y-auto p-3 mt-2 space-y-4">
-        {visibleNav.map(section => (
-          <div key={section.label}>
-            <p className="px-3 mb-1 text-[10px] font-bold uppercase tracking-widest"
-              style={{ color: 'var(--text-muted)' }}>
-              {section.label}
-            </p>
-            <ul className="space-y-0.5">
-              {section.items.map(item => {
-                const active = pathname === item.href || pathname.startsWith(item.href + '/');
-                return (
-                  <li key={item.name}>
-                    <Link href={item.href} className={`nav-link ${active ? 'active' : ''}`}>
-                      <item.icon size={28} strokeWidth={active ? 2.2 : 1.8} />
-                      {item.name}
-                      {item.name === 'Xabarlar' && unreadCount > 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-[12px] font-black px-2.5 py-1 rounded-full min-w-[24px] text-center shadow-[0_0_12px_rgba(239,68,68,0.5)]">
-                          {unreadCount}
-                        </span>
-                      )}
-                      {item.name === 'Buyurtmalar' && pendingOrdersCount > 0 && (
-                        <span className="ml-auto bg-amber-500 text-white text-[12px] font-black px-2.5 py-1 rounded-full min-w-[24px] text-center shadow-[0_0_12px_rgba(245,158,11,0.5)] animate-pulse">
-                          {pendingOrdersCount}
-                        </span>
-                      )}
-                      {active && !((item.name === 'Xabarlar' && unreadCount > 0) || (item.name === 'Buyurtmalar' && pendingOrdersCount > 0)) && <ChevronRight size={18} className="ml-auto opacity-40" />}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+      <aside className={`
+        fixed inset-y-0 left-0 z-[60] w-[260px] lg:w-[220px] flex flex-col border-r shrink-0 h-screen sticky top-0
+        transition-transform duration-300 ease-in-out bg-[var(--bg-surface)] border-[var(--border)]
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* ── Logo ── */}
+        <div className="h-14 flex items-center justify-between px-5 border-b" style={{ borderColor: 'var(--border)' }}>
+          <div className="flex items-center">
+            <div className="w-7 h-7 rounded-lg brand-gradient flex items-center justify-center mr-2.5 glow-brand">
+              <span className="text-white font-black text-sm">S</span>
+            </div>
+            <span className="font-semibold text-[15px]" style={{ color: 'var(--text-primary)' }}>ShopAdmin</span>
           </div>
-        ))}
-      </nav>
+          <button className="lg:hidden p-1 rounded-lg hover:bg-white/5" onClick={() => setIsOpen(false)}>
+            <ChevronLeft size={20} style={{ color: 'var(--text-muted)' }} />
+          </button>
+        </div>
 
-      {/* ── Footer ── */}
-      <div className="p-3 border-t space-y-0.5" style={{ borderColor: 'var(--border)' }}>
-        <Link href="/settings" className={`nav-link ${pathname === '/settings' ? 'active' : ''}`}>
-          <Settings size={28} />
-          Sozlamalar
-        </Link>
-        <button className="nav-link w-full text-left" style={{ color: 'var(--danger)' }} onClick={handleLogout}>
-          <LogOut size={28} />
-          Chiqish
-        </button>
-      </div>
-    </aside>
+        {/* ── User pill ── */}
+        <div className="mx-3 mt-3 px-3 py-2.5 rounded-xl flex items-center gap-2.5"
+          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+          <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+            {username?.[0]?.toUpperCase() ?? 'U'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+              {username ?? 'Foydalanuvchi'}
+            </p>
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide"
+              style={{ color: roleColors[role ?? ''] ?? 'var(--text-muted)' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: roleColors[role ?? ''] ?? 'var(--text-muted)' }} />
+              {roleLabels[role ?? ''] ?? 'Mehmon'}
+            </span>
+          </div>
+        </div>
+
+        {/* ── Nav ── */}
+        <nav className="flex-1 overflow-y-auto p-3 mt-2 space-y-4">
+          {visibleNav.map(section => (
+            <div key={section.label}>
+              <p className="px-3 mb-1 text-[10px] font-bold uppercase tracking-widest"
+                style={{ color: 'var(--text-muted)' }}>
+                {section.label}
+              </p>
+              <ul className="space-y-0.5">
+                {section.items.map(item => {
+                  const active = pathname === item.href || pathname.startsWith(item.href + '/');
+                  return (
+                    <li key={item.name}>
+                      <Link 
+                        href={item.href} 
+                        className={`nav-link ${active ? 'active' : ''}`}
+                        onClick={() => setIsOpen(false)} // Close on link click mobile
+                      >
+                        <item.icon size={28} strokeWidth={active ? 2.2 : 1.8} />
+                        {item.name}
+                        {item.name === 'Xabarlar' && unreadCount > 0 && (
+                          <span className="ml-auto bg-red-500 text-white text-[12px] font-black px-2.5 py-1 rounded-full min-w-[24px] text-center shadow-[0_0_12px_rgba(239,68,68,0.5)]">
+                            {unreadCount}
+                          </span>
+                        )}
+                        {item.name === 'Buyurtmalar' && pendingOrdersCount > 0 && (
+                          <span className="ml-auto bg-amber-500 text-white text-[12px] font-black px-2.5 py-1 rounded-full min-w-[24px] text-center shadow-[0_0_12px_rgba(245,158,11,0.5)] animate-pulse">
+                            {pendingOrdersCount}
+                          </span>
+                        )}
+                        {active && !((item.name === 'Xabarlar' && unreadCount > 0) || (item.name === 'Buyurtmalar' && pendingOrdersCount > 0)) && <ChevronRight size={18} className="ml-auto opacity-40" />}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        {/* ── Footer ── */}
+        <div className="p-3 border-t space-y-0.5" style={{ borderColor: 'var(--border)' }}>
+          <Link href="/settings" className={`nav-link ${pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsOpen(false)}>
+            <Settings size={28} />
+            Sozlamalar
+          </Link>
+          <button className="nav-link w-full text-left" style={{ color: 'var(--danger)' }} onClick={handleLogout}>
+            <LogOut size={28} />
+            Chiqish
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

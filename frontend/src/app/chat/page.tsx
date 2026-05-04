@@ -6,7 +6,7 @@ import Cookies from 'js-cookie';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Search, Phone, Video, MoreHorizontal,
-  CheckCheck, Check, Circle, Wifi, WifiOff
+  CheckCheck, Check, Circle, Wifi, WifiOff, ArrowLeft
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
@@ -187,8 +187,8 @@ function ChatContent() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-56px)] overflow-hidden" style={{ background: 'var(--bg-base)' }}>
-      <aside className="w-[280px] flex flex-col border-r flex-shrink-0" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+    <div className="flex h-[calc(100vh-56px)] overflow-hidden relative" style={{ background: 'var(--bg-base)' }}>
+      <aside className={`${activePeer ? 'hidden md:flex' : 'flex'} w-full md:w-[280px] flex flex-col border-r flex-shrink-0`} style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-[15px]" style={{ color: 'var(--text-primary)' }}>Xabarlar</h2>
@@ -224,10 +224,13 @@ function ChatContent() {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`${!activePeer ? 'hidden md:flex' : 'flex'} flex-1 flex flex-col min-w-0 h-full`}>
         {activePeer ? (
           <>
-            <div className="h-14 flex items-center px-5 gap-3 border-b glass flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+            <div className="h-14 flex items-center px-4 md:px-5 gap-2 md:gap-3 border-b glass flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+              <button className="md:hidden p-2 -ml-2 rounded-lg hover:bg-white/5" onClick={() => setActivePeer(null)}>
+                <ArrowLeft size={20} style={{ color: 'var(--text-primary)' }} />
+              </button>
               <div className="relative">
                 <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white font-bold text-sm">{activePeer.username[0].toUpperCase()}</div>
                 <div className="absolute bottom-0 right-0 w-2 h-2 rounded-full border" style={{ background: 'var(--success)', borderColor: 'var(--bg-surface)' }} />
