@@ -5,6 +5,8 @@ from django.db.models import Q
 from django.contrib.auth import get_user_model
 from .models import Message
 from .serializers import MessageSerializer
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 User = get_user_model()
 
@@ -28,7 +30,43 @@ class MessageViewSet(viewsets.ModelViewSet):
         return qs.order_by('timestamp')
 
     def perform_create(self, serializer):
-        serializer.save(sender=self.request.user)
+        file_obj = self.request.FILES.get('file')
+        if file_obj:
+            saved = serializer.save(sender=self.request.user, file_name=file_obj.name)
+        else:
+            saved = serializer.save(sender=self.request.user)
+
+        # Broadcast to WebSocket
+        channel_layer = get_channel_layer()
+        payload = {
+            "type": "chat_message",
+            "id": saved.id,
+            "message": saved.content,
+            "sender": saved.sender.username,
+            "sender_id": saved.sender.id,
+            "file": saved.file.url if saved.file else None,
+            "file_name": saved.file_name,
+            "is_image": saved.is_image,
+            "timestamp": saved.timestamp.isoformat(),
+            "order_id": saved.order.id if saved.order else None,
+        }
+
+        # Send to receiver's room
+        if saved.receiver:
+            async_to_sync(channel_layer.group_send)(f"chat_user_{saved.receiver.id}", payload)
+            # Notify badge
+            async_to_sync(channel_layer.group_send)(
+                f"user_{saved.receiver.id}", 
+                {"type": "notify_update", "data": {"type": "new_message", "sender_id": saved.sender.id}}
+            )
+        
+        # Send to order room if exists
+        if saved.order:
+            async_to_sync(channel_layer.group_send)(f"chat_order_{saved.order.id}", payload)
+        
+        # If admin/manager, also send to admin room
+        if saved.sender.role in ('ADMIN', 'MANAGER'):
+            async_to_sync(channel_layer.group_send)("chat_admin", payload)
 
     @action(detail=False, methods=['get'], url_path='conversations')
     def conversations(self, request):
@@ -46,7 +84,9 @@ class MessageViewSet(viewsets.ModelViewSet):
                     'user_id':    other.id,
                     'username':   other.username,
                     'role':       getattr(other, 'role', 'CUSTOMER'),
-                    'last_message': m.content,
+                    'is_online':  other.is_online,
+                    'last_seen':  other.last_seen.isoformat() if other.last_seen else None,
+                    'last_message': m.content if m.content else (f"📎 {m.file_name}" if m.file_name else "[Fayl]"),
                     'timestamp':  m.timestamp.isoformat(),
                     'unread':     Message.objects.filter(sender=other, receiver=user, is_read=False).count()
                 }

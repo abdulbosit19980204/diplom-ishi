@@ -11,5 +11,5 @@ class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Message
         fields = ('id', 'sender', 'sender_name', 'receiver', 'receiver_name',
-                  'order', 'content', 'timestamp', 'is_read')
+                  'order', 'content', 'file', 'file_name', 'is_image', 'timestamp', 'is_read')
         read_only_fields = ('sender', 'timestamp', 'is_read')

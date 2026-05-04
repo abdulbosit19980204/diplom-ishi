@@ -4,6 +4,7 @@ from channels.db import database_sync_to_async
 from .models import Message
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -49,6 +50,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.order_room = None
 
         await self.accept()
+        
+        # Update last_seen
+        await self.update_user_status(True)
 
         # Send confirmation
         await self.send(text_data=json.dumps({
@@ -74,6 +78,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         if not message_text:
             return
+
+        await self.update_user_status(True)
 
         # Save to database
         saved = await self.save_message(
@@ -125,6 +131,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "message": event["message"],
             "sender": event["sender"],
             "sender_id": event.get("sender_id"),
+            "file": event.get("file"),
+            "file_name": event.get("file_name"),
+            "is_image": event.get("is_image"),
             "timestamp": event.get("timestamp"),
             "order_id": event.get("order_id"),
         }))
@@ -147,6 +156,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
             content=content,
             order_id=order_id if order_id else None,
         )
+
+    @database_sync_to_async
+    def update_user_status(self, is_online):
+        if self.user and self.user.is_authenticated:
+            self.user.last_seen = timezone.now()
+            self.user.save(update_fields=['last_seen'])
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
