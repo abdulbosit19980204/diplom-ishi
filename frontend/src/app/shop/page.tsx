@@ -4,8 +4,8 @@ import api from '@/lib/api';
 import { useCartStore } from '@/store/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ShoppingBag, Search, Plus, Minus, X, CheckCircle2, 
-  ArrowRight, ShoppingCart, Loader2, Package, Tag, Clock, ChevronRight, SlidersHorizontal, Truck, MessageSquare
+  ShoppingBag, Search, SlidersHorizontal, Package, Loader2, ArrowRight, X, Minus, Plus, Trash2,
+  Clock, Truck, CheckCircle2, MessageSquare, ChevronLeft, ChevronRight, ArrowUp, ShoppingCart, Tag, ChevronRight as ChevronRightIcon
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
@@ -57,29 +57,40 @@ export default function ShopPage() {
   const [maxPrice, setMaxPrice] = useState('');
   const [users, setUsers]       = useState<any[]>([]);
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  
   const { items, addItem, removeItem, updateQuantity, clearCart, total } = useCartStore();
 
   const fetchAll = useCallback(async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const params = new URLSearchParams();
       if (sellerId) params.append('seller_id', sellerId);
       if (stockLt)  params.append('stock_lt', stockLt);
       if (minPrice) params.append('min_price', minPrice);
       if (maxPrice) params.append('max_price', maxPrice);
+      
+      let pUrl = `products/?page=${currentPage}&${params.toString()}`;
+      let oUrl = `orders/?page=${currentPage}`;
 
       const [prodRes, orderRes] = await Promise.all([
-        api.get(`products/?${params.toString()}`),
-        api.get('orders/')
+        api.get(pUrl),
+        api.get(oUrl)
       ]);
-      setProducts(prodRes.data);
-      setOrders(orderRes.data);
+      
+      setProducts(prodRes.data.results || []);
+      setTotalPages(Math.ceil((prodRes.data.count || 0) / 12));
+      
+      const sortedOrders = (orderRes.data.results || []).sort((a: any, b: any) => b.id - a.id);
+      setOrders(sortedOrders);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [sellerId, stockLt, minPrice, maxPrice]);
+  }, [sellerId, stockLt, minPrice, maxPrice, currentPage]);
 
   useEffect(() => {
     setMounted(true);
@@ -89,8 +100,15 @@ export default function ShopPage() {
     }
     
     window.addEventListener('refresh-orders', fetchAll);
-    return () => window.removeEventListener('refresh-orders', fetchAll);
-  }, [fetchAll]);
+    
+    const handleScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('refresh-orders', fetchAll);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [fetchAll, role]);
 
   const filtered = products.filter(p => {
     if (userId && p.created_by === Number(userId)) return false;
@@ -190,25 +208,26 @@ export default function ShopPage() {
         {!showOrders && (
           <>
             {/* ── Filters ── */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-               <div className="relative w-full max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-8">
+                <div className="relative flex-1">
+                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input 
-                    className="input pl-10 h-11 bg-surface-lighter" 
-                    placeholder="Mahsulot qidirish…" 
-                    value={search} 
-                    onChange={e => setSearch(e.target.value)} 
+                    className="input pl-12 h-11 text-sm w-full bg-surface-lighter border-none shadow-inner" 
+                    placeholder="Mahsulotlarni qidirish..." 
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
                   />
-               </div>
-               <button 
-                 className={`btn h-11 px-5 gap-3 text-sm font-bold transition-all rounded-xl w-full md:w-auto justify-center ${showFilters ? 'btn-primary' : 'bg-surface-lighter hover:bg-white/10'}`}
-                 onClick={() => setShowFilters(!showFilters)}
-               >
-                 <SlidersHorizontal size={18} />
-                 {showFilters ? 'Yopish' : 'Filtrlar'}
-                 {(sellerId || stockLt || minPrice || maxPrice) && <span className="w-2 h-2 rounded-full bg-red-400 ml-1 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />}
-               </button>
-            </div>
+                </div>
+                
+                <button 
+                  className={`btn h-11 px-5 gap-3 text-sm font-bold transition-all rounded-xl w-full md:w-auto justify-center ${showFilters ? 'btn-primary' : 'bg-surface-lighter hover:bg-white/10'}`}
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <SlidersHorizontal size={18} />
+                  <span>Filtrlar</span>
+                  {(sellerId || stockLt || minPrice || maxPrice) && <span className="w-2 h-2 rounded-full bg-red-400 ml-1 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />}
+                </button>
+             </div>
 
             <AnimatePresence>
               {showFilters && (
@@ -277,7 +296,7 @@ export default function ShopPage() {
                  <button onClick={() => setShowOrders(false)} className="mt-6 btn btn-primary px-8">Hozir xarid qilish</button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
                 {orders.map((order) => (
                   <motion.div 
                     key={order.id} 
@@ -297,10 +316,7 @@ export default function ShopPage() {
                     {/* ── Order Stepper ── */}
                     <div className="mb-8 mt-2">
                        <div className="relative flex justify-between">
-                          {/* Progress Line Background */}
                           <div className="absolute top-1/2 -translate-y-1/2 left-0 w-full h-[2px] bg-white/5" />
-                          
-                          {/* Active Progress Line (Static Fill) */}
                           <motion.div 
                             className="absolute top-1/2 -translate-y-1/2 left-0 h-[2px] bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"
                             initial={{ width: 0 }}
@@ -311,8 +327,6 @@ export default function ShopPage() {
                             }}
                             transition={{ duration: 1, ease: "circOut" }}
                           />
-
-                          {/* ── Active Flow Nur (Towards Next Step) ── */}
                           {order.status !== 'DELIVERED' && (
                              <div className="absolute top-1/2 -translate-y-1/2 h-[2px] overflow-hidden"
                                style={{ 
@@ -338,7 +352,6 @@ export default function ShopPage() {
                             const currentIdx = statuses.indexOf(order.status);
                             const isPast = idx < currentIdx;
                             const isCurrent = idx === currentIdx;
-                            const isFuture = idx > currentIdx;
 
                             return (
                               <div key={step.key} className="relative z-10 flex flex-col items-center">
@@ -405,91 +418,100 @@ export default function ShopPage() {
           </div>
         ) : (
           /* ── Product List ── */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filtered.map((product, idx) => {
-              const q = getItemQuantity(product.id);
-              return (
-                <motion.div 
-                  key={product.id}
-                  className="card group overflow-hidden flex flex-col cursor-pointer hover:shadow-2xl transition-all border-white/5"
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  onClick={() => setSelectedProduct(product)}
-                >
-                  <div className="aspect-square brand-gradient relative transition-transform group-hover:scale-105 duration-700 flex items-center justify-center opacity-90 group-hover:opacity-100 overflow-hidden">
-                    <ShoppingBag size={80} className="text-white/20 drop-shadow-2xl" />
-                    <div className="absolute top-4 left-4">
-                      <span className={`badge ${product.stock > 0 ? 'badge-delivered' : 'badge-cancelled'} text-[10px] font-black shadow-lg`}>
-                        {product.stock > 0 ? `${product.stock} dona mavjud` : 'Tugagan'}
-                      </span>
-                    </div>
-                    {product.stock <= 5 && product.stock > 0 && (
-                      <div className="absolute bottom-4 right-4 bg-red-500 text-white text-[9px] font-black px-2 py-1 rounded-md animate-pulse shadow-lg">
-                        SHOSHILING!
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {products.map((product, idx) => {
+                const q = getItemQuantity(product.id);
+                return (
+                  <motion.div 
+                    key={product.id}
+                    className="card group overflow-hidden flex flex-col cursor-pointer hover:shadow-2xl transition-all border-white/5"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    onClick={() => setSelectedProduct(product)}
+                  >
+                    <div className="aspect-square brand-gradient relative transition-transform group-hover:scale-105 duration-700 flex items-center justify-center opacity-90 group-hover:opacity-100 overflow-hidden">
+                      <ShoppingBag size={80} className="text-white/20 drop-shadow-2xl" />
+                      <div className="absolute top-4 left-4">
+                        <span className={`badge ${product.stock > 0 ? 'badge-delivered' : 'badge-cancelled'} text-[10px] font-black shadow-lg`}>
+                          {product.stock > 0 ? `${product.stock} dona mavjud` : 'Tugagan'}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                  
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="font-black text-xl mb-2 group-hover:text-indigo-400 transition-colors line-clamp-1 tracking-tight" style={{ color: 'var(--text-primary)' }}>{product.name}</h3>
-                    
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-6 h-6 rounded-lg brand-gradient flex items-center justify-center text-[10px] text-white font-black shadow-md">
-                        {(product.created_by_name || 'A')[0].toUpperCase()}
-                      </div>
-                      <span className="text-[12px] font-bold text-gray-500">
-                        {product.created_by_name || 'Admin'}
-                      </span>
-                    </div>
-
-                    <p className="text-[13px] line-clamp-2 mb-6 flex-1 text-gray-500 leading-relaxed italic font-medium">
-                      "{product.description || "Premium sifatdagi tanlov."}"
-                    </p>
-                    
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
-                      <div>
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Narxi</p>
-                        <p className="font-black text-xl text-green-400 tracking-tighter">
-                          {fmt(product.price)}
-                        </p>
-                      </div>
-                      
-                      {q > 0 ? (
-                        <div className="flex items-center bg-white/5 border border-white/10 rounded-2xl p-1 gap-4 shadow-inner" onClick={e => e.stopPropagation()}>
-                          <button 
-                            onClick={() => updateQuantity(product.id, -1)}
-                            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors text-gray-400"
-                          >
-                            <Minus size={16} />
-                          </button>
-                          <span className="font-black text-base w-4 text-center">{q}</span>
-                          <button 
-                            onClick={() => updateQuantity(product.id, 1)}
-                            disabled={q >= product.stock}
-                            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors text-indigo-400 disabled:opacity-30"
-                          >
-                            <Plus size={16} />
-                          </button>
+                      {product.stock <= 5 && product.stock > 0 && (
+                        <div className="absolute bottom-4 right-4 bg-red-500 text-white text-[9px] font-black px-2 py-1 rounded-md animate-pulse shadow-lg">
+                          SHOSHILING!
                         </div>
-                      ) : (
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addItem({ ...product, price: Number(product.price), quantity: 1 });
-                          }}
-                          disabled={product.stock <= 0}
-                          className={`btn w-12 h-12 p-0 rounded-2xl flex items-center justify-center transition-all ${product.stock > 0 ? 'btn-primary shadow-xl shadow-indigo-500/30 active:scale-90 hover:rotate-3' : 'opacity-20 cursor-not-allowed grayscale'}`}
-                        >
-                          <Plus size={24} />
-                        </button>
                       )}
                     </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+                    
+                    <div className="p-6 flex-1 flex flex-col">
+                      <h3 className="font-black text-xl mb-2 group-hover:text-indigo-400 transition-colors line-clamp-1 tracking-tight" style={{ color: 'var(--text-primary)' }}>{product.name}</h3>
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-6 h-6 rounded-lg brand-gradient flex items-center justify-center text-[10px] text-white font-black shadow-md">
+                          {(product.created_by_name || 'A')[0].toUpperCase()}
+                        </div>
+                        <span className="text-[12px] font-bold text-gray-500">{product.created_by_name || 'Admin'}</span>
+                      </div>
+                      <p className="text-[13px] line-clamp-2 mb-6 flex-1 text-gray-500 leading-relaxed italic font-medium">"{product.description || "Premium sifatdagi tanlov."}"</p>
+                      <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
+                        <div>
+                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Narxi</p>
+                          <p className="font-black text-xl text-green-400 tracking-tighter">{fmt(product.price)}</p>
+                        </div>
+                        {q > 0 ? (
+                          <div className="flex items-center bg-white/5 border border-white/10 rounded-2xl p-1 gap-4 shadow-inner" onClick={e => e.stopPropagation()}>
+                            <button onClick={() => updateQuantity(product.id, -1)} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors text-gray-400"><Minus size={16} /></button>
+                            <span className="font-black text-base w-4 text-center">{q}</span>
+                            <button onClick={() => updateQuantity(product.id, 1)} disabled={q >= product.stock} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors text-indigo-400 disabled:opacity-30"><Plus size={16} /></button>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); addItem({ ...product, price: Number(product.price), quantity: 1 }); }}
+                            disabled={product.stock <= 0}
+                            className={`btn w-12 h-12 p-0 rounded-2xl flex items-center justify-center transition-all ${product.stock > 0 ? 'btn-primary shadow-xl shadow-indigo-500/30 active:scale-90 hover:rotate-3' : 'opacity-20 cursor-not-allowed grayscale'}`}
+                          >
+                            <Plus size={24} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Pagination UI */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-12 mb-8">
+                <button 
+                  disabled={currentPage === 1}
+                  onClick={() => { setCurrentPage(prev => prev - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  className="btn btn-secondary p-2 disabled:opacity-30"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                
+                {[...Array(totalPages)].map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setCurrentPage(i + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className={`w-10 h-10 rounded-xl font-bold transition-all ${currentPage === i + 1 ? 'btn-primary' : 'bg-surface-lighter hover:bg-white/10'}`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+
+                <button 
+                  disabled={currentPage === totalPages}
+                  onClick={() => { setCurrentPage(prev => prev + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  className="btn btn-secondary p-2 disabled:opacity-30"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
 

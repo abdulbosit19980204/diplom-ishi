@@ -6,7 +6,7 @@ import Cookies from 'js-cookie';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Search, Phone, Video, MoreHorizontal,
-  CheckCheck, Check, Circle, Wifi, WifiOff, ArrowLeft
+  CheckCheck, Check, Circle, Wifi, WifiOff, ArrowLeft, ChevronLeft
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
@@ -63,7 +63,6 @@ function ChatContent() {
       if (data.type === 'chat_message') {
         if (!activeOrder || String(data.order_id) === String(activeOrder)) {
           setMessages(prev => {
-            // Remove optimistic message sent by this client (identified by sender_id: -1)
             const filtered = prev.filter(m => !(m.sender_id === -1 && m.message === data.message));
             
             if (filtered.find(m => m.id === data.id)) return filtered;
@@ -112,13 +111,12 @@ function ChatContent() {
         order_id: m.order,
       })));
 
-      // Mark as read
       await api.post('chat/mark-read/', { user_id: conv.user_id });
       setConversations(prev => prev.map(c => 
         c.user_id === conv.user_id ? { ...c, unread: 0 } : c
       ));
     } catch {}
-  }, []);
+  }, [activeOrder]);
 
   useEffect(() => {
     setMounted(true);
@@ -231,8 +229,8 @@ function ChatContent() {
         {activePeer ? (
           <>
             <div className="h-14 flex items-center px-4 md:px-5 gap-2 md:gap-3 border-b glass flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
-              <button className="md:hidden p-2 -ml-2 rounded-lg hover:bg-white/5" onClick={() => setActivePeer(null)}>
-                <ArrowLeft size={20} style={{ color: 'var(--text-primary)' }} />
+              <button className="md:hidden p-2 -ml-2 rounded-lg hover:bg-white/5" onClick={() => { setActivePeer(null); window.history.replaceState({}, '', '/chat'); }}>
+                <ChevronLeft size={20} style={{ color: 'var(--text-primary)' }} />
               </button>
               <div className="relative">
                 <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white font-bold text-sm">{activePeer.username[0].toUpperCase()}</div>

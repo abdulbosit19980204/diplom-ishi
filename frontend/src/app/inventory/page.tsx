@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   History, ArrowUpCircle, ArrowDownCircle, RefreshCw, 
-  Filter, Calendar, Search, Package, User, Hash, Plus, X, Loader2
+  Filter, Calendar, Search, Package, User, Hash, Plus, X, Loader2, ChevronLeft, ChevronRight, ArrowUp
 } from 'lucide-react';
 
 interface Transaction {
@@ -32,26 +32,40 @@ export default function InventoryPage() {
   const [amount, setAmount] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const fetchTransactions = () => {
-    setLoading(true);
-    let url = 'inventory-transactions/?';
-    if (productId) url += `&product_id=${productId}`;
-    if (typeFilter) url += `&transaction_type=${typeFilter}`;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
-    api.get(url)
-      .then(r => setTransactions(r.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  };
+  const fetchTransactions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (productId) params.append('product_id', productId);
+      if (typeFilter) params.append('transaction_type', typeFilter);
+      params.append('page', String(currentPage));
+
+      const r = await api.get(`inventory-transactions/?${params.toString()}`);
+      setTransactions(r.data.results || []);
+      setTotalPages(Math.ceil((r.data.count || 0) / 12));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [productId, typeFilter, currentPage]);
 
   useEffect(() => {
     fetchTransactions();
-    api.get('products/').then(r => setProducts(r.data)).catch(console.error);
+    api.get('products/?page_size=1000').then(r => setProducts(r.data.results || [])).catch(console.error);
+    
+    const handleScroll = () => setShowScrollTop(window.scrollY > 300);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
     fetchTransactions();
-  }, [productId, typeFilter]);
+  }, [productId, typeFilter, currentPage]);
 
   const handleRestock = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,12 +89,6 @@ export default function InventoryPage() {
       setSaving(false);
     }
   };
-
-  const filtered = transactions.filter(t => {
-    const matchesSearch = t.product_name.toLowerCase().includes(search.toLowerCase());
-    const matchesType = typeFilter ? t.transaction_type === typeFilter : true;
-    return matchesSearch && matchesType;
-  });
 
   const typeLabels: any = {
     SALE: { label: 'Sotuv', icon: ArrowDownCircle, color: 'text-red-400', bg: 'bg-red-400/10' },
@@ -131,7 +139,7 @@ export default function InventoryPage() {
             <div className="card p-4 md:p-6 bg-surface-lighter border-dashed flex flex-col sm:flex-row sm:items-end gap-4 md:gap-6">
                <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-widest">Mahsulot</label>
-                  <select className="input h-10 text-xs w-full sm:w-[200px] bg-surface" value={productId} onChange={e => setProductId(e.target.value)}>
+                  <select className="input h-10 text-xs w-full sm:w-[200px] bg-surface" value={productId} onChange={e => {setProductId(e.target.value); setCurrentPage(1);}}>
                      <option value="">Barcha mahsulotlar</option>
                      {products.map(p => (
                        <option key={p.id} value={p.id}>{p.name}</option>
@@ -141,7 +149,7 @@ export default function InventoryPage() {
 
                <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-widest">Tranzaksiya turi</label>
-                  <select className="input h-10 text-xs w-full sm:w-[160px] bg-surface" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+                  <select className="input h-10 text-xs w-full sm:w-[160px] bg-surface" value={typeFilter} onChange={e => {setTypeFilter(e.target.value); setCurrentPage(1);}}>
                      <option value="">Barcha turlar</option>
                      <option value="SALE">Sotuv</option>
                      <option value="RESTOCK">Kirim</option>
@@ -157,7 +165,7 @@ export default function InventoryPage() {
 
                {(productId || typeFilter || search) && (
                  <button className="btn btn-ghost text-[11px] font-black text-red-400 h-10 px-4 hover:bg-red-500/10" onClick={() => {
-                   setProductId(''); setTypeFilter(''); setSearch('');
+                   setProductId(''); setTypeFilter(''); setSearch(''); setCurrentPage(1);
                  }}>
                    Tozalash
                  </button>
@@ -184,7 +192,7 @@ export default function InventoryPage() {
               Array(10).fill(0).map((_, i) => (
                 <tr key={i}>{Array(6).fill(0).map((_, j) => <td key={j}><div className="skeleton h-4 rounded w-full" /></td>)}</tr>
               ))
-            ) : filtered.length === 0 ? (
+            ) : transactions.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-20 text-center">
                   <History size={48} className="mx-auto text-gray-600 opacity-20 mb-3" />
@@ -192,7 +200,7 @@ export default function InventoryPage() {
                 </td>
               </tr>
             ) : (
-              filtered.map((t) => {
+              transactions.map((t) => {
                 const typeInfo = typeLabels[t.transaction_type] || { label: t.transaction_type, icon: History, color: 'text-gray-400', bg: 'bg-gray-400/10' };
                 const Icon = typeInfo.icon;
                 return (

@@ -39,7 +39,7 @@ export default function UsersPage() {
       router.push('/dashboard');
       return;
     }
-    api.get('users/').then(r => setUsers(r.data)).catch(console.error).finally(() => setLoading(false));
+    api.get('users/').then(r => setUsers(Array.isArray(r.data) ? r.data : (r.data.results || []))).catch(console.error).finally(() => setLoading(false));
   }, [role, isSuperuser, router]);
 
   const filtered = users.filter(u => {

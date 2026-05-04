@@ -154,7 +154,7 @@ export default function AnalyticsPage() {
                         initial={{ height: 0 }}
                         animate={{ height: `${pct}%` }}
                         transition={{ duration: 0.6, delay: i * 0.07 }} />
-                      <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{m.month.slice(5)}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{m.month ? String(m.month).slice(5) : '-'}</p>
                     </div>
                   );
                 })}

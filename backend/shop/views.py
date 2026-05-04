@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, pagination
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,8 +12,14 @@ User = get_user_model()
 from .models import Product, Order, InventoryTransaction
 from .serializers import ProductSerializer, OrderSerializer, InventoryTransactionSerializer
 
+class StandardResultsSetPagination(pagination.PageNumberPagination):
+    page_size = 12
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -76,6 +82,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -100,7 +107,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         if user.is_superuser or user.role == 'ADMIN':
             return queryset
         if user.role == 'MANAGER':
-            return queryset.filter(items__product__created_by=user).distinct()
+            from django.db.models import Q
+            return queryset.filter(Q(user=user) | Q(items__product__created_by=user)).distinct()
         return queryset.filter(user=user)
 
     def get_permissions(self):
@@ -119,6 +127,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response({'count': queryset.count()})
 
 class InventoryTransactionViewSet(viewsets.ModelViewSet):
+    pagination_class = StandardResultsSetPagination
     def get_queryset(self):
         user = self.request.user
         queryset = InventoryTransaction.objects.all().order_by('-created_at')

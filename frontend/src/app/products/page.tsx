@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, LayoutGrid, List, Grid, Edit2, Trash2, X, SlidersHorizontal, AlertTriangle } from 'lucide-react';
+import { Plus, Search, List, Grid, Edit2, Trash2, X, SlidersHorizontal, ChevronLeft, ChevronRight, ArrowUp, AlertTriangle } from 'lucide-react';
 
 interface Product {
   id: number;
@@ -41,19 +41,30 @@ export default function ProductsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  const fetchProducts = () => {
-    setLoading(true);
-    let url = 'products/?my_products=true';
-    if (sellerId) url += `&seller_id=${sellerId}`;
-    if (stockLt) url += `&stock_lt=${stockLt}`;
-    if (minPrice) url += `&min_price=${minPrice}`;
-    if (maxPrice) url += `&max_price=${maxPrice}`;
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
-    api.get(url)
-      .then(r => setProducts(r.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  };
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (sellerId) params.append('seller_id', sellerId);
+      if (stockLt) params.append('stock_lt', stockLt);
+      if (minPrice) params.append('min_price', minPrice);
+      if (maxPrice) params.append('max_price', maxPrice);
+      params.append('page', String(currentPage));
+
+      const r = await api.get(`products/?my_products=true&${params.toString()}`);
+      setProducts(r.data.results || []);
+      setTotalPages(Math.ceil((r.data.count || 0) / 12));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [sellerId, stockLt, minPrice, maxPrice, currentPage]);
 
   useEffect(() => { 
     setMounted(true);
@@ -61,15 +72,21 @@ export default function ProductsPage() {
     if (isSuperuser || role === 'ADMIN') {
       api.get('users/').then(r => setUsers(r.data)).catch(() => {});
     }
+    const handleScroll = () => setShowScrollTop(window.scrollY > 300);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
-    if (mounted) fetchProducts();
+    if (mounted) {
+      setCurrentPage(1);
+      fetchProducts();
+    }
   }, [sellerId, stockLt, minPrice, maxPrice]);
 
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    if (mounted) fetchProducts();
+  }, [currentPage]);
 
   const openAdd = () => { setForm(EMPTY); setEditId(null); setError(''); setModal('add'); };
   const openEdit = (p: Product) => { setForm({ name: p.name, description: p.description, price: p.price, stock: p.stock }); setEditId(p.id); setError(''); setModal('edit'); };
@@ -94,13 +111,12 @@ export default function ProductsPage() {
 
   const deleteProduct = async (id: number) => {
     await api.delete(`products/${id}/`);
-    setProducts(prev => prev.filter(p => p.id !== id));
+    fetchProducts();
     setDeleteConfirm(null);
   };
 
   return (
     <div className="p-6 space-y-5 max-w-[1400px]">
-      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4 w-full sm:w-auto">
           <div className="relative w-full max-w-md">
@@ -181,9 +197,7 @@ export default function ProductsPage() {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
-
-      {/* Table view */}
+      </AnimatePresence>      {/* Table view */}
       {view === 'table' && (
         <motion.div className="card overflow-x-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <table className="table-base w-full min-w-[700px]">
@@ -202,7 +216,7 @@ export default function ProductsPage() {
                 ? Array(5).fill(0).map((_, i) => (
                   <tr key={i}>{Array(6).fill(0).map((_, j) => <td key={j}><div className="skeleton h-4 rounded" /></td>)}</tr>
                 ))
-                : filtered.map((p, i) => (
+                : products.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map((p, i) => (
                   <motion.tr key={p.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
                     <td>
                       <div className="flex items-center gap-3">
@@ -217,7 +231,7 @@ export default function ProductsPage() {
                       </div>
                     </td>
                     <td>
-                      <div className="flex items-center gap-2">
+                       <div className="flex items-center gap-2">
                         <div className="w-5 h-5 rounded-full brand-gradient flex items-center justify-center text-[8px] text-white font-bold">
                           {(p.created_by_name || 'A')[0].toUpperCase()}
                         </div>
@@ -247,15 +261,15 @@ export default function ProductsPage() {
                       <div className="flex items-center justify-end gap-3">
                         {(isSuperuser || role === 'ADMIN' || String(p.created_by) === String(userId)) ? (
                           <>
-                            <button className="btn btn-ghost w-16 h-16 p-0 rounded-2xl text-blue-400 hover:bg-blue-500/10" 
+                            <button className="btn btn-ghost w-10 h-10 p-0 rounded-xl text-blue-400 hover:bg-blue-500/10" 
                               onClick={() => openEdit(p)}
                               title="Tahrirlash">
-                              {mounted && <Edit2 size={48} />}
+                              <Edit2 size={16} />
                             </button>
-                            <button className="btn btn-ghost w-16 h-16 p-0 rounded-2xl text-red-400 hover:bg-red-500/10" 
+                            <button className="btn btn-ghost w-10 h-10 p-0 rounded-xl text-red-400 hover:bg-red-500/10" 
                               onClick={() => setDeleteConfirm(p.id)}
                               title="O'chirish">
-                              {mounted && <Trash2 size={48} />}
+                              <Trash2 size={16} />
                             </button>
                           </>
                         ) : (
@@ -266,8 +280,8 @@ export default function ProductsPage() {
                   </motion.tr>
                 ))
               }
-              {!loading && filtered.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-12" style={{ color: 'var(--text-muted)' }}>Mahsulotlar topilmadi.</td></tr>
+              {!loading && products.length === 0 && (
+                <tr><td colSpan={6} className="text-center py-12" style={{ color: 'var(--text-muted)' }}>Mahsulotlar topilmadi.</td></tr>
               )}
             </tbody>
           </table>
@@ -277,7 +291,7 @@ export default function ProductsPage() {
       {/* Grid view */}
       {view === 'grid' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((p, i) => (
+          {products.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map((p, i) => (
             <motion.div key={p.id} className="card p-4 group cursor-pointer"
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}>
               <div className="w-full h-28 rounded-lg mb-4 flex items-center justify-center text-3xl font-bold text-indigo-400"
@@ -310,6 +324,30 @@ export default function ProductsPage() {
           </motion.div>
         </div>
       )}
+
+      {/* Pagination UI */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-8 mb-4">
+          <button disabled={currentPage === 1} onClick={() => { setCurrentPage(p => p - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="btn btn-secondary p-2 disabled:opacity-30"><ChevronLeft size={20} /></button>
+          {[...Array(totalPages)].map((_, i) => (
+            <button key={i} onClick={() => { setCurrentPage(i + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`w-10 h-10 rounded-xl font-bold transition-all ${currentPage === i + 1 ? 'btn-primary' : 'bg-surface-lighter hover:bg-white/10'}`}>{i + 1}</button>
+          ))}
+          <button disabled={currentPage === totalPages} onClick={() => { setCurrentPage(p => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="btn btn-secondary p-2 disabled:opacity-30"><ChevronRight size={20} /></button>
+        </div>
+      )}
+
+      {/* Scroll Top Button */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.5, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.5, y: 20 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed bottom-10 right-10 w-12 h-12 rounded-2xl bg-indigo-500 text-white shadow-xl flex items-center justify-center z-[100] hover:bg-indigo-400"
+          >
+            <ArrowUp size={24} />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Add/Edit Modal */}
       <AnimatePresence>

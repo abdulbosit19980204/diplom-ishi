@@ -4,7 +4,7 @@ import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Search, X, CheckCircle2, Clock, Truck, Package, ChevronRight, MessageSquare, SlidersHorizontal } from 'lucide-react';
+import { Clock, Truck, CheckCircle2, Package, Search, SlidersHorizontal, ChevronRight, X, ChevronLeft, ArrowUp, MessageSquare, AlertCircle, Calendar, User, Tag } from 'lucide-react';
 
 const statusFlow = [
   { key: 'PENDING',   label: 'Kutilmoqda',       icon: Clock,         color: 'var(--warning)' },
@@ -30,6 +30,10 @@ export default function OrdersPage() {
   const [customerId, setCustomerId] = useState('');
   const [users, setUsers]         = useState<any[]>([]); // For customer filter
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
@@ -38,26 +42,34 @@ export default function OrdersPage() {
       if (startDate) params.append('start_date', startDate);
       if (endDate) params.append('end_date', endDate);
       if (customerId) params.append('customer_id', customerId);
+      params.append('page', String(currentPage));
 
       const r = await api.get(`orders/?${params.toString()}`);
-      setOrders(r.data);
+      setOrders(r.data.results);
+      setTotalPages(Math.ceil(r.data.count / 12));
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [status, startDate, endDate, customerId]);
+  }, [status, startDate, endDate, customerId, currentPage]);
 
   useEffect(() => {
     setMounted(true);
     fetchOrders();
+    const handleScroll = () => setShowScrollTop(window.scrollY > 300);
+    window.addEventListener('scroll', handleScroll);
+    
     // Load users for the filter if Admin/Manager
     if (role === 'ADMIN' || role === 'MANAGER') {
        api.get('users/').then(r => setUsers(r.data)).catch(() => {});
     }
 
     window.addEventListener('refresh-orders', fetchOrders);
-    return () => window.removeEventListener('refresh-orders', fetchOrders);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('refresh-orders', fetchOrders);
+    };
   }, [fetchOrders, role]);
 
   const filtered = orders.filter(o =>
@@ -79,7 +91,7 @@ export default function OrdersPage() {
   return (
     <div className="p-4 md:p-6 max-w-[1400px] flex flex-col lg:flex-row gap-5 h-[calc(100vh-56px)] overflow-hidden relative">
       {/* List panel */}
-      <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+      <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
         {/* Status cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {statusFlow.map(s => (
