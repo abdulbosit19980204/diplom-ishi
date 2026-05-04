@@ -49,12 +49,18 @@ export default function ShopPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [mounted, setMounted] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showOrderFilters, setShowOrderFilters] = useState(false);
 
-  // Filters
+  // Product Filters
   const [sellerId, setSellerId] = useState('');
   const [stockLt, setStockLt]   = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+
+  // Order Filters
+  const [orderStatusFilter, setOrderStatusFilter] = useState('');
+  const [orderStartDate, setOrderStartDate] = useState('');
+  const [orderEndDate, setOrderEndDate]     = useState('');
   const [users, setUsers]       = useState<any[]>([]);
   
   const [currentPage, setCurrentPage] = useState(1);
@@ -66,14 +72,23 @@ export default function ShopPage() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (sellerId) params.append('seller_id', sellerId);
-      if (stockLt)  params.append('stock_lt', stockLt);
-      if (minPrice) params.append('min_price', minPrice);
-      if (maxPrice) params.append('max_price', maxPrice);
       
-      let pUrl = `products/?page=${currentPage}&${params.toString()}`;
-      let oUrl = `orders/?page=${currentPage}`;
+      // Product params
+      const pParams = new URLSearchParams();
+      if (sellerId) pParams.append('seller_id', sellerId);
+      if (stockLt)  pParams.append('stock_lt', stockLt);
+      if (minPrice) pParams.append('min_price', minPrice);
+      if (maxPrice) pParams.append('max_price', maxPrice);
+      
+      // Order params
+      const oParams = new URLSearchParams();
+      if (orderStatusFilter) oParams.append('status', orderStatusFilter);
+      if (orderStartDate)    oParams.append('start_date', orderStartDate);
+      if (orderEndDate)      oParams.append('end_date', orderEndDate);
+      oParams.append('page', String(currentPage));
+
+      let pUrl = `products/?page=${currentPage}&${pParams.toString()}`;
+      let oUrl = `orders/?${oParams.toString()}`;
 
       const [prodRes, orderRes] = await Promise.all([
         api.get(pUrl),
@@ -90,7 +105,7 @@ export default function ShopPage() {
     } finally {
       setLoading(false);
     }
-  }, [sellerId, stockLt, minPrice, maxPrice, currentPage]);
+  }, [sellerId, stockLt, minPrice, maxPrice, orderStatusFilter, orderStartDate, orderEndDate, currentPage]);
 
   useEffect(() => {
     setMounted(true);
@@ -289,6 +304,74 @@ export default function ShopPage() {
         ) : showOrders ? (
           /* ── Orders History ── */
           <div className="space-y-6">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-2">
+               <div className="relative flex-1">
+                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input 
+                    className="input pl-12 h-11 text-sm w-full bg-surface-lighter border-none shadow-inner" 
+                    placeholder="Buyurtma ID bo'yicha qidirish..." 
+                    onChange={e => {
+                      const val = e.target.value;
+                      // Local search for orders
+                      if (!val) { fetchAll(); return; }
+                      setOrders(prev => prev.filter(o => o.id.toString().includes(val)));
+                    }}
+                  />
+               </div>
+               <button 
+                  className={`btn h-11 px-5 gap-3 text-sm font-bold transition-all rounded-xl w-full md:w-auto justify-center ${showOrderFilters ? 'btn-primary' : 'bg-surface-lighter hover:bg-white/10'}`}
+                  onClick={() => setShowOrderFilters(!showOrderFilters)}
+                >
+                  <SlidersHorizontal size={18} />
+                  <span>Filtrlar</span>
+                  {(orderStatusFilter || orderStartDate || orderEndDate) && <span className="w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white shadow-sm" />}
+                </button>
+            </div>
+
+            <AnimatePresence>
+              {showOrderFilters && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden mb-6"
+                >
+                  <div className="card p-5 border-dashed space-y-4" style={{ background: 'var(--bg-base)' }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-wider">Holat</label>
+                        <select className="input h-10 text-sm" value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)}>
+                           <option value="">Barchasi</option>
+                           <option value="PENDING">Kutilmoqda</option>
+                           <option value="ACCEPTED">Tasdiqlandi</option>
+                           <option value="SHIPPED">Yo'lda</option>
+                           <option value="DELIVERED">Yetkazildi</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-wider">Sana oralig'i</label>
+                        <div className="flex items-center gap-2">
+                           <input type="date" className="input h-10 text-sm flex-1" value={orderStartDate} onChange={e => setOrderStartDate(e.target.value)} />
+                           <span className="text-gray-400">—</span>
+                           <input type="date" className="input h-10 text-sm flex-1" value={orderEndDate} onChange={e => setOrderEndDate(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {(orderStatusFilter || orderStartDate || orderEndDate) && (
+                      <div className="flex justify-end pt-2">
+                        <button className="btn btn-ghost text-[12px] text-red-500 font-bold" onClick={() => {
+                            setOrderStatusFilter(''); setOrderStartDate(''); setOrderEndDate('');
+                        }}>
+                          Filtrlarni tozalash
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             {orders.length === 0 ? (
               <div className="card p-32 text-center flex flex-col items-center opacity-40 border-dashed">
                  <Package size={80} className="mb-4" />

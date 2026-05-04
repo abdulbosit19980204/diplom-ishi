@@ -108,64 +108,70 @@ export default function OrdersPage() {
             </div>
           ))}
         </div>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
-           <div className="relative w-full max-w-md">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input className="input pl-9 text-sm h-10" placeholder="Buyurtma ID bo'yicha qidirish…" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="flex flex-col gap-4 mb-4">
+           <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                 <input className="input pl-9 text-sm h-11" placeholder="ID yoki ism bo'yicha qidirish…" value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+              <button 
+                className={`btn h-11 px-4 gap-2 text-sm transition-all rounded-xl ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <SlidersHorizontal size={18} />
+                <span className="hidden sm:inline">{showFilters ? 'Yopish' : 'Filtrlar'}</span>
+                {(status || startDate || endDate || customerId) && <span className="w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white shadow-sm" />}
+              </button>
            </div>
-           <button 
-             className={`btn h-10 px-4 gap-2 text-sm transition-all w-full sm:w-auto justify-center ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
-             onClick={() => setShowFilters(!showFilters)}
-           >
-             <SlidersHorizontal size={16} />
-             {showFilters ? 'Yopish' : 'Filtrlar'}
-             {(status || startDate || endDate || customerId) && <span className="w-2 h-2 rounded-full bg-red-400 ml-1" />}
-           </button>
         </div>
 
         <AnimatePresence>
           {showFilters && (
             <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden mb-6"
+              initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+              animate={{ height: 'auto', opacity: 1, marginBottom: 24 }}
+              exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+              className="overflow-hidden"
             >
-              <div className="card p-4 bg-surface-lighter border-dashed flex flex-wrap items-center gap-3">
-                 <div className="flex flex-col gap-1">
-                   <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Holat</label>
-                   <select className="input h-9 text-xs w-[140px]" value={status} onChange={e => setStatus(e.target.value)}>
-                      <option value="">Barcha holatlar</option>
-                      {statusFlow.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                   </select>
-                 </div>
+              <div className="card p-5 border-dashed space-y-4" style={{ background: 'var(--bg-base)' }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-wider">Buyurtma holati</label>
+                    <select className="input h-10 text-sm" value={status} onChange={e => setStatus(e.target.value)}>
+                       <option value="">Barchasi</option>
+                       {statusFlow.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                    </select>
+                  </div>
 
-                 {(role === 'ADMIN' || role === 'MANAGER') && (
-                   <div className="flex flex-col gap-1">
-                     <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Mijoz</label>
-                     <select className="input h-9 text-xs w-[160px]" value={customerId} onChange={e => setCustomerId(e.target.value)}>
-                        <option value="">Barcha mijozlar</option>
-                        {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
-                     </select>
-                   </div>
-                 )}
+                  {(role === 'ADMIN' || role === 'MANAGER') && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-wider">Mijoz</label>
+                      <select className="input h-10 text-sm" value={customerId} onChange={e => setCustomerId(e.target.value)}>
+                         <option value="">Barcha mijozlar</option>
+                         {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+                      </select>
+                    </div>
+                  )}
 
-                 <div className="flex flex-col gap-1">
-                   <label className="text-[10px] font-bold uppercase text-gray-500 px-1">Sana oralig'i</label>
-                   <div className="flex items-center gap-2">
-                      <input type="date" className="input h-9 text-xs w-[130px]" value={startDate} onChange={e => setStartDate(e.target.value)} />
-                      <span className="text-gray-400">—</span>
-                      <input type="date" className="input h-9 text-xs w-[130px]" value={endDate} onChange={e => setEndDate(e.target.value)} />
-                   </div>
-                 </div>
-                 
-                 <div className="flex items-end h-full pt-5">
-                   {(status || startDate || endDate || customerId) && (
-                     <button className="btn btn-ghost text-[11px] text-red-400 h-9 px-3" onClick={() => {
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-gray-500 px-1 tracking-wider">Sana oralig'i</label>
+                    <div className="flex items-center gap-2">
+                       <input type="date" className="input h-10 text-sm flex-1" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                       <span className="text-gray-400">—</span>
+                       <input type="date" className="input h-10 text-sm flex-1" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+                
+                {(status || startDate || endDate || customerId) && (
+                  <div className="flex justify-end pt-2">
+                    <button className="btn btn-ghost text-[12px] text-red-500 font-bold" onClick={() => {
                         setStatus(''); setStartDate(''); setEndDate(''); setCustomerId('');
-                     }}>Filtrlarni tozalash</button>
-                   )}
-                 </div>
+                    }}>
+                      Filtrlarni tozalash
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
