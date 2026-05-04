@@ -44,6 +44,7 @@ class MessageViewSet(viewsets.ModelViewSet):
             "message": saved.content,
             "sender": saved.sender.username,
             "sender_id": saved.sender.id,
+            "receiver_id": saved.receiver.id if saved.receiver else None,
             "file": saved.file.url if saved.file else None,
             "file_name": saved.file_name,
             "is_image": saved.is_image,

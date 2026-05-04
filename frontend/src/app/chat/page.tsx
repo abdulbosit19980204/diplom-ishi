@@ -274,7 +274,25 @@ function ChatContent() {
       if (activeOrder) formData.append('order', activeOrder);
       if (selectedFile) formData.append('file', selectedFile);
 
-      await api.post('chat/', formData);
+      const r = await api.post('chat/', formData);
+      const m = r.data;
+      
+      // Xabarni API'dan kelgan zahoti ekranga qo'shamiz (refresh qilmaslik uchun)
+      setMessages(prev => {
+        if (prev.find(x => x.id === m.id)) return prev;
+        return [...prev, {
+          id: m.id,
+          sender: m.sender_name,
+          sender_id: m.sender,
+          message: m.content,
+          file: m.file,
+          file_name: m.file_name,
+          is_image: m.is_image,
+          timestamp: m.timestamp,
+          order_id: m.order,
+        }];
+      });
+
       setNewMessage('');
       setSelectedFile(null);
       setFilePreview(null);

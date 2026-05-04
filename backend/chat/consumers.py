@@ -104,6 +104,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "message": saved.content,
             "sender": self.user.username,
             "sender_id": self.user.id,
+            "receiver_id": receiver_id,
             "timestamp": saved.timestamp.isoformat(),
             "order_id": order_id,
         }
