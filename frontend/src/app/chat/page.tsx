@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, useCallback, Suspense, useMemo, memo } from 'react';
-import api from '@/lib/api';
+import api, { getWsUrl } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import Cookies from 'js-cookie';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -103,6 +103,7 @@ function ChatContent() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const activePeerRef = useRef<Conversation | null>(null);
+  const lastTypingTimeRef = useRef<number>(0); // React #310 fix: Hooklarni if() dan tepaga oldik
 
   useEffect(() => {
     activePeerRef.current = activePeer;
@@ -113,18 +114,24 @@ function ChatContent() {
     if (!token) return;
     ws.current?.close();
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || (typeof window !== 'undefined' ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/` : 'ws://localhost:8000/ws/');
-    const url = `${wsUrl}chat/?token=${token}${activeOrder ? `&order_id=${activeOrder}` : ''}`;
+    const wsBase = getWsUrl();
+    const url = `${wsBase}chat/?token=${token}${activeOrder ? `&order_id=${activeOrder}` : ''}`;
     const socket = new WebSocket(url);
 
     socket.onopen  = () => {
       setConnected(true);
       console.log('Chat Socket connected.');
     };
-    socket.onclose = () => { 
+    socket.onclose = (event) => { 
       setConnected(false); 
-      console.log('Chat Socket closed. Reconnecting...');
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+      
+      if (event.code === 4001 || event.code === 4003) {
+        console.warn('Chat WebSocket auth xatosi. Qayta ulanilmaydi.');
+        return;
+      }
+      
+      console.log('Chat Socket closed. Reconnecting...');
       setTimeout(connect, 3000); 
     };
     socket.onerror = () => setConnected(false);
@@ -292,7 +299,6 @@ function ChatContent() {
     }
   };
 
-  const lastTypingTimeRef = useRef<number>(0);
   const sendTyping = () => {
     const now = Date.now();
     if (now - lastTypingTimeRef.current < 2000) return;
